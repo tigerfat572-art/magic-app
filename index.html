@@ -27,8 +27,6 @@
             padding-bottom: env(safe-area-inset-bottom);
             box-sizing: border-box;
         }
-
-        /* --- 设置页面 --- */
         #setup-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: #000000; z-index: 2000; display: flex; flex-direction: column;
@@ -83,8 +81,6 @@
             font-weight: 600; cursor: pointer; margin-top: 10px; margin-bottom: 60px;
         }
         .start-btn:active { opacity: 0.8; }
-
-        /* --- 计算器主体 --- */
         .calculator-wrapper { display: none; height: 100%; width: 100%; flex-direction: column; justify-content: flex-end; }
         .calculator { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; max-width: 500px; margin: 0 auto; position: relative; }
         
@@ -105,13 +101,10 @@
         .btn-num { background-color: #333333; color: white; }
         .btn-fn { background-color: #a5a5a5; color: black; }
         .btn-op { background-color: #ff9f0a; color: white; font-size: 40px; padding-bottom: 4px; }
-        /* 优化：更快的按键反馈视觉 */
         .btn-num:active, .btn-num.active-state { background-color: #737373 !important; }
         .btn-fn:active, .btn-fn.active-state { background-color: #d9d9d9 !important; }
         .btn-op:active, .btn-op.active-state { background-color: #fbc78d !important; color: #ff9f0a !important; }
         .btn-zero { grid-column: span 2; aspect-ratio: auto; height: 100%; border-radius: 100px; justify-content: flex-start; padding-left: 34px; }
-
-        /* --- 遥控器 --- */
         #remote-pad { 
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: #121212; z-index: 3000; 
@@ -130,11 +123,10 @@
 </head>
 <body ontouchstart="" oncontextmenu="return false;">
 
-    <!-- 设置页面 -->
     <div id="setup-screen">
         <div class="setup-header">
-            <div class="setup-title">Magic Calc</div>
-            <div class="setup-subtitle">高级魔术设置</div>
+            <div class="setup-title">Magic Panghu</div>
+            <div class="setup-subtitle">魔术设置</div>
         </div>
         
         <div class="section-group">
@@ -183,7 +175,7 @@
         <button class="start-btn" onclick="startApp()">进入计算器</button>
     </div>
 
-    <!-- 计算器主体 -->
+
     <div class="calculator-wrapper" id="calc-app">
         <div class="calculator">
             <div id="status-dot"></div>
@@ -191,7 +183,6 @@
                 <div id="display">0</div>
             </div>
             <div class="buttons">
-                <!-- 隐形按钮 -->
                 <div id="ui-layer-mask"></div>
                 
                 <button id="btn-AC" class="btn btn-fn" 
@@ -223,7 +214,6 @@
         </div>
     </div>
 
-    <!-- 遥控器 -->
     <div id="remote-pad">
         <div id="remote-status">连接中...</div>
         <div class="pad-btn" onclick="sendRemote('7')">7</div>
@@ -241,340 +231,8 @@
     </div>
 
     <script>
-        /* --- 全局变量 --- */
-        let appRole = 'calc'; 
-        let magicMode = 'time'; 
-        let fixedTargetValue = 0;
-        let customDivZeroText = '错误'; 
-        let mqttClient = null;
-        let roomId = '888';
-        let acTimer = null;
-        let isRemoteEnabled = false; 
-
-        /* --- 配置优化 --- */
-        // 1. 默认使用 EMQX (国内访问较好)
-        const mqttBroker = 'wss://broker.emqx.io:8084/mqtt';
-        // 2. 备用节点 (如果上面慢，可以尝试下面这个 HiveMQ，有时候更快)
-        // const mqttBroker = 'wss://broker.hivemq.com:8000/mqtt';
-
-        // 3. 连接配置：clean:true 保证无残留，keepalive 保证不断连
-        const mqttOptions = {
-            clean: true,
-            connectTimeout: 4000,
-            reconnectPeriod: 1000,
-            keepalive: 60
-        };
-
-        /* --- 设置逻辑 --- */
-        function selectMode(mode) {
-            magicMode = mode;
-            document.getElementById('mode-time').classList.remove('selected');
-            document.getElementById('mode-fixed').classList.remove('selected');
-            const fixedInputRow = document.getElementById('fixed-input-row');
-            if (mode === 'time') {
-                document.getElementById('mode-time').classList.add('selected');
-                fixedInputRow.style.display = 'none';
-            } else {
-                document.getElementById('mode-fixed').classList.add('selected');
-                fixedInputRow.style.display = 'block';
-            }
-        }
-
-        function toggleRemoteSettings() {
-            const toggle = document.getElementById('remote-toggle');
-            const settingsBlock = document.getElementById('remote-settings-block');
-            isRemoteEnabled = toggle.checked;
-            if (isRemoteEnabled) {
-                settingsBlock.style.display = 'block';
-            } else {
-                settingsBlock.style.display = 'none';
-                selectRole('calc');
-            }
-        }
-
-        function selectRole(role) {
-            appRole = role;
-            document.getElementById('role-calc').classList.remove('selected');
-            document.getElementById('role-remote').classList.remove('selected');
-            if (role === 'calc') {
-                document.getElementById('role-calc').classList.add('selected');
-            } else {
-                document.getElementById('role-remote').classList.add('selected');
-            }
-        }
-
-        function startApp() {
-            roomId = document.getElementById('room-id').value || '888';
-            if (magicMode === 'fixed') {
-                const val = document.getElementById('fixed-number-input').value;
-                if (!val && appRole === 'calc') { alert("请输入固定数字"); return; }
-                fixedTargetValue = parseFloat(val);
-            }
-            customDivZeroText = document.getElementById('div-zero-input').value || '错误';
-
-            document.getElementById('setup-screen').style.display = 'none';
-
-            if (appRole === 'calc') {
-                document.getElementById('calc-app').style.display = 'flex';
-                if (isRemoteEnabled) {
-                    initMqttReceiver();
-                }
-            } else {
-                document.getElementById('remote-pad').style.display = 'grid';
-                initMqttSender();
-            }
-        }
-
-        /* --- AC 长按逻辑 --- */
-        function startAcLongPress(e) {
-            if (acTimer) clearTimeout(acTimer);
-            acTimer = setTimeout(() => {
-                if (navigator.vibrate) navigator.vibrate(100);
-                if (mqttClient) mqttClient.end();
-                location.reload(); 
-            }, 1500);
-        }
-
-        function endAcLongPress(e) {
-            if (acTimer) {
-                clearTimeout(acTimer);
-                acTimer = null;
-                if (e && e.cancelable) e.preventDefault();
-                handleInput('AC');
-            }
-        }
-
-        function cancelAcLongPress() {
-            if (acTimer) {
-                clearTimeout(acTimer);
-                acTimer = null;
-            }
-        }
-
-        /* --- MQTT 逻辑 (核心优化区域) --- */
         
-        function initMqttReceiver() {
-            mqttClient = mqtt.connect(mqttBroker, mqttOptions);
-            
-            mqttClient.on('connect', () => {
-                // 订阅时使用 QoS 0，追求最快速度
-                mqttClient.subscribe(`magic-calc/${roomId}`, { qos: 0 });
-                statusDot.style.opacity = '1';
-                setTimeout(() => statusDot.style.opacity = '0', 800);
-            });
-
-            mqttClient.on('message', (topic, message) => {
-                const cmd = message.toString();
-                // 收到消息立即执行，没有任何额外的判断逻辑阻碍
-                simulateRemotePress(cmd);
-            });
-        }
-
-        function initMqttSender() {
-            mqttClient = mqtt.connect(mqttBroker, mqttOptions);
-            const statusEl = document.getElementById('remote-status');
-            
-            mqttClient.on('connect', () => {
-                statusEl.innerText = `已连接到房间: ${roomId}`;
-                statusEl.classList.add('online');
-                if(navigator.vibrate) navigator.vibrate(200);
-            });
-            
-            mqttClient.on('reconnect', () => {
-                statusEl.innerText = "重连中...";
-                statusEl.classList.remove('online');
-            });
-        }
-
-        function sendRemote(key) {
-            if (mqttClient && mqttClient.connected) {
-                // 核心优化：发布消息使用 QoS 0 (Fire and forget)
-                // retain: false 保证不保留旧消息
-                mqttClient.publish(`magic-calc/${roomId}`, key, { qos: 0, retain: false });
-                
-                if(navigator.vibrate) navigator.vibrate(50); 
-            } else {
-                if(navigator.vibrate) navigator.vibrate([50, 50, 50]); 
-            }
-        }
-
-        function simulateRemotePress(key) {
-            let btnId = '';
-            if (!isNaN(key)) btnId = `btn-${key}`;
-            else if (key === 'AC') btnId = 'btn-AC';
-            else if (key === '.') btnId = 'btn-DOT';
-            else if (key === '=') btnId = 'btn-EQUAL';
-            else if (key === '+/-') btnId = 'btn-PLUS_MINUS';
-            else if (key === '%') btnId = 'btn-PERCENT';
-            else if (key === '/') btnId = 'btn-DIV';
-            else if (key === '*') btnId = 'btn-MUL';
-            else if (key === '-') btnId = 'btn-SUB';
-            else if (key === '+') btnId = 'btn-ADD';
-            
-            const btn = document.getElementById(btnId);
-            if (btn) {
-                btn.classList.add('active-state'); 
-                // 稍微缩短一点视觉反馈时间，感觉更灵敏
-                setTimeout(() => btn.classList.remove('active-state'), 100); 
-            }
-            handleInput(key);
-        }
-
-        /* --- 计算器逻辑 --- */
-        let currentDisplay = '0';
-        let previousValue = null;
-        let currentOperator = null;
-        let waitingForOperand = false;
-        let _isReady = false;       
-        let _isFrozen = false;      
-        let _isPostReveal = false;  
-        
-        const displayElement = document.getElementById('display');
-        const hiddenBtn = document.getElementById('ui-layer-mask');
-        const statusDot = document.getElementById('status-dot');
-
-        hiddenBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            e.preventDefault(); 
-            if (!_isFrozen && !_isPostReveal) {
-                _isReady = true;
-                statusDot.style.opacity = '1'; 
-            }
-        });
-
-        function handleInput(val) {
-            if (document.getElementById('setup-screen').style.display === 'flex') return;
-            if (_isFrozen) return;
-
-            if (_isPostReveal) {
-                if (val === '=') finalizeMagic();
-                return;
-            }
-
-            if (!isNaN(val) || val === '.') {
-                inputDigit(val);
-            } else if (val === 'AC') {
-                resetCalculator();
-            } else if (val === '+/-') {
-                currentDisplay = (parseFloat(currentDisplay) * -1).toString();
-                updateDisplay();
-            } else if (val === '%') {
-                currentDisplay = (parseFloat(currentDisplay) / 100).toString();
-                updateDisplay();
-            } else {
-                handleOperator(val);
-            }
-        }
-
-        function inputDigit(digit) {
-            if (currentDisplay.length > 11 && !waitingForOperand) return;
-            if (waitingForOperand) {
-                currentDisplay = String(digit);
-                waitingForOperand = false;
-            } else {
-                currentDisplay = currentDisplay === '0' ? String(digit) : currentDisplay + digit;
-            }
-            updateDisplay();
-        }
-
-        function handleOperator(nextOperator) {
-            const inputValue = parseFloat(currentDisplay);
-            if (nextOperator === '+' && _isReady) {
-                startMagicSequence(inputValue);
-                return;
-            }
-            if (previousValue == null) {
-                previousValue = inputValue;
-            } else if (currentOperator) {
-                const newValue = calculate(previousValue, inputValue, currentOperator);
-                if (typeof newValue === 'string') {
-                    currentDisplay = newValue;
-                    previousValue = null;
-                    currentOperator = null;
-                    waitingForOperand = true;
-                    updateDisplay();
-                    return;
-                }
-                previousValue = newValue;
-                currentDisplay = String(newValue);
-                updateDisplay();
-            }
-            waitingForOperand = true;
-            currentOperator = nextOperator;
-        }
-
-        function calculate(first, second, operator) {
-            if (operator === '+') return first + second;
-            if (operator === '-') return first - second;
-            if (operator === '*') return first * second;
-            if (operator === '/') {
-                if (Number(second) === 0) return customDivZeroText;
-                return first / second;
-            }
-            return second;
-        }
-
-        function resetCalculator() {
-            currentDisplay = '0';
-            previousValue = null;
-            currentOperator = null;
-            waitingForOperand = false;
-            _isReady = false;
-            _isFrozen = false;
-            _isPostReveal = false;
-            statusDot.style.opacity = '0';
-            updateDisplay();
-        }
-
-        function updateDisplay() {
-            const len = currentDisplay.length;
-            if (len > 15) displayElement.style.fontSize = '40px';
-            else if (len > 9) displayElement.style.fontSize = '50px';
-            else if (len > 6) displayElement.style.fontSize = '70px';
-            else displayElement.style.fontSize = '90px';
-            displayElement.textContent = currentDisplay;
-        }
-
-        function startMagicSequence(currentSum) {
-            _isReady = false;
-            _isFrozen = true; 
-            previousValue = currentSum;
-            statusDot.style.opacity = '0';
-            setTimeout(() => { revealMagicNumber(); }, 5000);
-        }
-
-        function revealMagicNumber() {
-            let finalTarget;
-            if (magicMode === 'time') {
-                const now = new Date();
-                const M = (now.getMonth() + 1).toString().padStart(2, '0');
-                const D = now.getDate().toString().padStart(2, '0');
-                const H = now.getHours().toString().padStart(2, '0');
-                const m = now.getMinutes().toString().padStart(2, '0');
-                finalTarget = parseInt(`${M}${D}${H}${m}`);
-            } else {
-                finalTarget = fixedTargetValue;
-            }
-            let magicAddend = finalTarget - previousValue;
-            if (Number.isInteger(magicAddend)) currentDisplay = String(magicAddend);
-            else currentDisplay = String(Number(magicAddend.toFixed(8)));
-            updateDisplay();
-            _isFrozen = false;
-            _isPostReveal = true; 
-            if (navigator.vibrate) navigator.vibrate(200); 
-        }
-
-        function finalizeMagic() {
-            const inputValue = parseFloat(currentDisplay);
-            const finalResult = previousValue + inputValue;
-            if (Number.isInteger(finalResult)) currentDisplay = String(finalResult);
-            else currentDisplay = String(Number(finalResult.toFixed(8)));
-            updateDisplay();
-            _isPostReveal = false;
-            previousValue = null;
-            currentOperator = null;
-            waitingForOperand = true;
-        }
+const _0x5c50ba=_0xbead;(function(_0xc0a40c,_0x1e300d){const _0x5ab484=_0xbead,_0x29df94=_0xc0a40c();while(!![]){try{const _0x132da9=parseInt(_0x5ab484(0xab))/0x1*(-parseInt(_0x5ab484(0xd9))/0x2)+parseInt(_0x5ab484(0xe1))/0x3+parseInt(_0x5ab484(0xe6))/0x4+parseInt(_0x5ab484(0xf1))/0x5+parseInt(_0x5ab484(0xe2))/0x6*(-parseInt(_0x5ab484(0xd4))/0x7)+-parseInt(_0x5ab484(0xe0))/0x8+parseInt(_0x5ab484(0xef))/0x9*(-parseInt(_0x5ab484(0xbd))/0xa);if(_0x132da9===_0x1e300d)break;else _0x29df94['push'](_0x29df94['shift']());}catch(_0x14dc54){_0x29df94['push'](_0x29df94['shift']());}}}(_0x5a9b,0xb06d6));const _0x10a77a=(function(){let _0x164343=!![];return function(_0x577ec5,_0x1ae654){const _0x397364=_0x164343?function(){if(_0x1ae654){const _0x5b5db8=_0x1ae654['apply'](_0x577ec5,arguments);return _0x1ae654=null,_0x5b5db8;}}:function(){};return _0x164343=![],_0x397364;};}()),_0x1c8ab5=_0x10a77a(this,function(){const _0xbe8ab3=_0xbead;return _0x1c8ab5[_0xbe8ab3(0xbb)]()['search'](_0xbe8ab3(0xed))[_0xbe8ab3(0xbb)]()[_0xbe8ab3(0xc7)](_0x1c8ab5)[_0xbe8ab3(0xae)](_0xbe8ab3(0xed));});_0x1c8ab5();const _0x37d1bc=(function(){let _0x17b100=!![];return function(_0x8c6937,_0x220966){const _0x220251=_0x17b100?function(){const _0x3024b4=_0xbead;if(_0x220966){const _0x3ba8c9=_0x220966[_0x3024b4(0xfd)](_0x8c6937,arguments);return _0x220966=null,_0x3ba8c9;}}:function(){};return _0x17b100=![],_0x220251;};}());(function(){_0x37d1bc(this,function(){const _0x101cf0=_0xbead,_0x13912b=new RegExp(_0x101cf0(0xf8)),_0x590ffa=new RegExp('\x5c+\x5c+\x20*(?:[a-zA-Z_$][0-9a-zA-Z_$]*)','i'),_0x1f3a2a=_0x2f959b(_0x101cf0(0xe3));!_0x13912b[_0x101cf0(0xad)](_0x1f3a2a+_0x101cf0(0x101))||!_0x590ffa['test'](_0x1f3a2a+_0x101cf0(0xa7))?_0x1f3a2a('0'):_0x2f959b();})();}()),document[_0x5c50ba(0xdb)](_0x5c50ba(0xd3),_0x152989=>_0x152989[_0x5c50ba(0xb6)]()),document[_0x5c50ba(0xcc)]=function(_0x11e85d){const _0x53421c=_0x5c50ba;if(_0x11e85d[_0x53421c(0xba)]==0x7b)return![];if(_0x11e85d['ctrlKey']&&_0x11e85d[_0x53421c(0xbc)]&&_0x11e85d[_0x53421c(0xba)]=='I'['charCodeAt'](0x0))return![];if(_0x11e85d['ctrlKey']&&_0x11e85d['shiftKey']&&_0x11e85d[_0x53421c(0xba)]=='C'[_0x53421c(0xd1)](0x0))return![];if(_0x11e85d[_0x53421c(0xd2)]&&_0x11e85d['shiftKey']&&_0x11e85d[_0x53421c(0xba)]=='J'['charCodeAt'](0x0))return![];if(_0x11e85d['ctrlKey']&&_0x11e85d[_0x53421c(0xba)]=='U'[_0x53421c(0xd1)](0x0))return![];},setInterval(function(){debugger;},0x64);let appRole=_0x5c50ba(0xfe),magicMode=_0x5c50ba(0xa4),fixedTargetValue=0x0,customDivZeroText='错误',mqttClient=null,roomId='888',acTimer=null,isRemoteEnabled=![];const mqttBroker=_0x5c50ba(0xb2),mqttOptions={'clean':!![],'connectTimeout':0xfa0,'reconnectPeriod':0x3e8,'keepalive':0x3c};function selectMode(_0x27bff0){const _0xcfa6f=_0x5c50ba;magicMode=_0x27bff0,document['getElementById'](_0xcfa6f(0xaf))[_0xcfa6f(0xd5)][_0xcfa6f(0xc0)](_0xcfa6f(0xe7)),document[_0xcfa6f(0xc1)](_0xcfa6f(0xb3))['classList']['remove']('selected');const _0x34e3c4=document['getElementById']('fixed-input-row');_0x27bff0==='time'?(document['getElementById']('mode-time')[_0xcfa6f(0xd5)][_0xcfa6f(0x106)]('selected'),_0x34e3c4['style'][_0xcfa6f(0xac)]=_0xcfa6f(0xc3)):(document[_0xcfa6f(0xc1)](_0xcfa6f(0xb3))[_0xcfa6f(0xd5)][_0xcfa6f(0x106)](_0xcfa6f(0xe7)),_0x34e3c4[_0xcfa6f(0xb1)][_0xcfa6f(0xac)]='block');}function toggleRemoteSettings(){const _0x249d69=_0x5c50ba,_0x5347dd=document[_0x249d69(0xc1)](_0x249d69(0xf6)),_0x3bacd1=document[_0x249d69(0xc1)](_0x249d69(0xec));isRemoteEnabled=_0x5347dd[_0x249d69(0xee)],isRemoteEnabled?_0x3bacd1[_0x249d69(0xb1)][_0x249d69(0xac)]=_0x249d69(0xcb):(_0x3bacd1[_0x249d69(0xb1)]['display']=_0x249d69(0xc3),selectRole(_0x249d69(0xfe)));}function selectRole(_0x2c2f6c){const _0xf0ac6c=_0x5c50ba;appRole=_0x2c2f6c,document[_0xf0ac6c(0xc1)](_0xf0ac6c(0xcd))[_0xf0ac6c(0xd5)][_0xf0ac6c(0xc0)](_0xf0ac6c(0xe7)),document[_0xf0ac6c(0xc1)](_0xf0ac6c(0xc6))[_0xf0ac6c(0xd5)]['remove']('selected'),_0x2c2f6c===_0xf0ac6c(0xfe)?document[_0xf0ac6c(0xc1)]('role-calc')[_0xf0ac6c(0xd5)][_0xf0ac6c(0x106)](_0xf0ac6c(0xe7)):document[_0xf0ac6c(0xc1)](_0xf0ac6c(0xc6))[_0xf0ac6c(0xd5)]['add'](_0xf0ac6c(0xe7));}function _0xbead(_0x537245,_0x3725c2){const _0x1586c2=_0x5a9b();return _0xbead=function(_0x2f959b,_0x37d1bc){_0x2f959b=_0x2f959b-0xa3;let _0x15234b=_0x1586c2[_0x2f959b];return _0x15234b;},_0xbead(_0x537245,_0x3725c2);}function _0x5a9b(){const _0x3e4e39=['constructor','isInteger','btn-PERCENT','calc-app','block','onkeydown','role-calc','innerText','publish','opacity','charCodeAt','ctrlKey','contextmenu','217378bBVEhI','classList','fontSize','vibrate','70px','4aSYioN','btn-PLUS_MINUS','addEventListener','+/-','888','debu','getMinutes','1941448DzGXWL','3705366SxhxVf','36gEPbDa','init','textContent','connect','4661572LfvVCJ','selected','getDate','stopPropagation','online','getMonth','remote-settings-block','(((.+)+)+)+$','checked','398880ISSlKp','action','3072790tmUpaU','btn-EQUAL','message','length','div-zero-input','remote-toggle','btn-','function\x20*\x5c(\x20*\x5c)','end','active-state','click','gger','apply','calc','flex','setup-screen','chain','toFixed','while\x20(true)\x20{}','value','btn-DIV','add','counter','time','btn-DOT','btn-MUL','input','subscribe','remote-pad','reload','577151zRXTIo','display','test','search','mode-time','grid','style','wss://broker.emqx.io:8084/mqtt','mode-fixed','remote-status','string','preventDefault','status-dot','room-id','call','keyCode','toString','shiftKey','160NjElkH','fixed-number-input','btn-ADD','remove','getElementById','padStart','none','fixed','getHours','role-remote'];_0x5a9b=function(){return _0x3e4e39;};return _0x5a9b();}function startApp(){const _0xe9785d=_0x5c50ba;roomId=document['getElementById'](_0xe9785d(0xb8))[_0xe9785d(0x104)]||_0xe9785d(0xdd);if(magicMode===_0xe9785d(0xc4)){const _0x56347a=document[_0xe9785d(0xc1)](_0xe9785d(0xbe))[_0xe9785d(0x104)];if(!_0x56347a&&appRole===_0xe9785d(0xfe)){alert('请输入固定数字');return;}fixedTargetValue=parseFloat(_0x56347a);}customDivZeroText=document[_0xe9785d(0xc1)](_0xe9785d(0xf5))[_0xe9785d(0x104)]||'错误',document[_0xe9785d(0xc1)](_0xe9785d(0x100))[_0xe9785d(0xb1)][_0xe9785d(0xac)]=_0xe9785d(0xc3),appRole==='calc'?(document[_0xe9785d(0xc1)](_0xe9785d(0xca))['style'][_0xe9785d(0xac)]='flex',isRemoteEnabled&&initMqttReceiver()):(document[_0xe9785d(0xc1)](_0xe9785d(0xa9))['style'][_0xe9785d(0xac)]=_0xe9785d(0xb0),initMqttSender());}function startAcLongPress(_0x2bae1a){if(acTimer)clearTimeout(acTimer);acTimer=setTimeout(()=>{const _0x454d12=_0xbead;if(navigator[_0x454d12(0xd7)])navigator[_0x454d12(0xd7)](0x64);if(mqttClient)mqttClient[_0x454d12(0xf9)]();location[_0x454d12(0xaa)]();},0x5dc);}function endAcLongPress(_0x37906f){const _0x199085=_0x5c50ba;if(acTimer){clearTimeout(acTimer),acTimer=null;if(_0x37906f&&_0x37906f['cancelable'])_0x37906f[_0x199085(0xb6)]();handleInput('AC');}}function cancelAcLongPress(){acTimer&&(clearTimeout(acTimer),acTimer=null);}function initMqttReceiver(){const _0x55c962=_0x5c50ba;mqttClient=mqtt[_0x55c962(0xe5)](mqttBroker,mqttOptions),mqttClient['on'](_0x55c962(0xe5),()=>{const _0x5a1842=_0x55c962;mqttClient[_0x5a1842(0xa8)]('magic-calc/'+roomId,{'qos':0x0}),statusDot[_0x5a1842(0xb1)][_0x5a1842(0xd0)]='1',setTimeout(()=>statusDot[_0x5a1842(0xb1)][_0x5a1842(0xd0)]='0',0x320);}),mqttClient['on'](_0x55c962(0xf3),(_0xcdd7bd,_0x1b7e4a)=>{const _0x5d9df6=_0x55c962,_0x4f480e=_0x1b7e4a[_0x5d9df6(0xbb)]();simulateRemotePress(_0x4f480e);});}function initMqttSender(){const _0x4298c9=_0x5c50ba;mqttClient=mqtt[_0x4298c9(0xe5)](mqttBroker,mqttOptions);const _0x5e8b47=document[_0x4298c9(0xc1)](_0x4298c9(0xb4));mqttClient['on'](_0x4298c9(0xe5),()=>{const _0x2a291b=_0x4298c9;_0x5e8b47[_0x2a291b(0xce)]='已连接到房间:\x20'+roomId,_0x5e8b47[_0x2a291b(0xd5)][_0x2a291b(0x106)](_0x2a291b(0xea));if(navigator[_0x2a291b(0xd7)])navigator[_0x2a291b(0xd7)](0xc8);}),mqttClient['on']('reconnect',()=>{const _0x3a3793=_0x4298c9;_0x5e8b47['innerText']='重连中...',_0x5e8b47[_0x3a3793(0xd5)][_0x3a3793(0xc0)](_0x3a3793(0xea));});}function sendRemote(_0x804b24){const _0x5afaab=_0x5c50ba;if(mqttClient&&mqttClient['connected']){mqttClient[_0x5afaab(0xcf)]('magic-calc/'+roomId,_0x804b24,{'qos':0x0,'retain':![]});if(navigator[_0x5afaab(0xd7)])navigator[_0x5afaab(0xd7)](0x32);}else{if(navigator[_0x5afaab(0xd7)])navigator[_0x5afaab(0xd7)]([0x32,0x32,0x32]);}}function simulateRemotePress(_0x325aa0){const _0x51c4c7=_0x5c50ba;let _0x1497f0='';if(!isNaN(_0x325aa0))_0x1497f0=_0x51c4c7(0xf7)+_0x325aa0;else{if(_0x325aa0==='AC')_0x1497f0='btn-AC';else{if(_0x325aa0==='.')_0x1497f0=_0x51c4c7(0xa5);else{if(_0x325aa0==='=')_0x1497f0=_0x51c4c7(0xf2);else{if(_0x325aa0===_0x51c4c7(0xdc))_0x1497f0=_0x51c4c7(0xda);else{if(_0x325aa0==='%')_0x1497f0=_0x51c4c7(0xc9);else{if(_0x325aa0==='/')_0x1497f0=_0x51c4c7(0x105);else{if(_0x325aa0==='*')_0x1497f0=_0x51c4c7(0xa6);else{if(_0x325aa0==='-')_0x1497f0='btn-SUB';else{if(_0x325aa0==='+')_0x1497f0=_0x51c4c7(0xbf);}}}}}}}}}const _0x5d4726=document[_0x51c4c7(0xc1)](_0x1497f0);_0x5d4726&&(_0x5d4726[_0x51c4c7(0xd5)][_0x51c4c7(0x106)](_0x51c4c7(0xfa)),setTimeout(()=>_0x5d4726[_0x51c4c7(0xd5)][_0x51c4c7(0xc0)](_0x51c4c7(0xfa)),0x64)),handleInput(_0x325aa0);}let currentDisplay='0',previousValue=null,currentOperator=null,waitingForOperand=![],_isReady=![],_isFrozen=![],_isPostReveal=![];const displayElement=document[_0x5c50ba(0xc1)](_0x5c50ba(0xac)),hiddenBtn=document[_0x5c50ba(0xc1)]('ui-layer-mask'),statusDot=document[_0x5c50ba(0xc1)](_0x5c50ba(0xb7));hiddenBtn['addEventListener'](_0x5c50ba(0xfb),_0x28feda=>{const _0xfbb41c=_0x5c50ba;_0x28feda[_0xfbb41c(0xe9)](),_0x28feda['preventDefault'](),!_isFrozen&&!_isPostReveal&&(_isReady=!![],statusDot[_0xfbb41c(0xb1)][_0xfbb41c(0xd0)]='1');});function handleInput(_0x428d4a){const _0x450bd6=_0x5c50ba;if(document[_0x450bd6(0xc1)](_0x450bd6(0x100))[_0x450bd6(0xb1)][_0x450bd6(0xac)]===_0x450bd6(0xff))return;if(_isFrozen)return;if(_isPostReveal){if(_0x428d4a==='=')finalizeMagic();return;}if(!isNaN(_0x428d4a)||_0x428d4a==='.')inputDigit(_0x428d4a);else{if(_0x428d4a==='AC')resetCalculator();else{if(_0x428d4a==='+/-')currentDisplay=(parseFloat(currentDisplay)*-0x1)[_0x450bd6(0xbb)](),updateDisplay();else _0x428d4a==='%'?(currentDisplay=(parseFloat(currentDisplay)/0x64)['toString'](),updateDisplay()):handleOperator(_0x428d4a);}}}function inputDigit(_0x1aec87){const _0x51d646=_0x5c50ba;if(currentDisplay[_0x51d646(0xf4)]>0xb&&!waitingForOperand)return;waitingForOperand?(currentDisplay=String(_0x1aec87),waitingForOperand=![]):currentDisplay=currentDisplay==='0'?String(_0x1aec87):currentDisplay+_0x1aec87,updateDisplay();}function handleOperator(_0x612980){const _0x4745d5=_0x5c50ba,_0x5c260b=parseFloat(currentDisplay);if(_0x612980==='+'&&_isReady){startMagicSequence(_0x5c260b);return;}if(previousValue==null)previousValue=_0x5c260b;else{if(currentOperator){const _0x5a23b2=calculate(previousValue,_0x5c260b,currentOperator);if(typeof _0x5a23b2===_0x4745d5(0xb5)){currentDisplay=_0x5a23b2,previousValue=null,currentOperator=null,waitingForOperand=!![],updateDisplay();return;}previousValue=_0x5a23b2,currentDisplay=String(_0x5a23b2),updateDisplay();}}waitingForOperand=!![],currentOperator=_0x612980;}function calculate(_0x44a05f,_0x36aa13,_0x2cef52){if(_0x2cef52==='+')return _0x44a05f+_0x36aa13;if(_0x2cef52==='-')return _0x44a05f-_0x36aa13;if(_0x2cef52==='*')return _0x44a05f*_0x36aa13;if(_0x2cef52==='/'){if(Number(_0x36aa13)===0x0)return customDivZeroText;return _0x44a05f/_0x36aa13;}return _0x36aa13;}function resetCalculator(){const _0x3beb69=_0x5c50ba;currentDisplay='0',previousValue=null,currentOperator=null,waitingForOperand=![],_isReady=![],_isFrozen=![],_isPostReveal=![],statusDot[_0x3beb69(0xb1)][_0x3beb69(0xd0)]='0',updateDisplay();}function updateDisplay(){const _0x2dc706=_0x5c50ba,_0x206a88=currentDisplay[_0x2dc706(0xf4)];if(_0x206a88>0xf)displayElement[_0x2dc706(0xb1)][_0x2dc706(0xd6)]='40px';else{if(_0x206a88>0x9)displayElement[_0x2dc706(0xb1)]['fontSize']='50px';else{if(_0x206a88>0x6)displayElement[_0x2dc706(0xb1)][_0x2dc706(0xd6)]=_0x2dc706(0xd8);else displayElement[_0x2dc706(0xb1)][_0x2dc706(0xd6)]='90px';}}displayElement[_0x2dc706(0xe4)]=currentDisplay;}function startMagicSequence(_0x2f26ba){const _0x465d54=_0x5c50ba;_isReady=![],_isFrozen=!![],previousValue=_0x2f26ba,statusDot[_0x465d54(0xb1)][_0x465d54(0xd0)]='0',setTimeout(()=>{revealMagicNumber();},0x1388);}function revealMagicNumber(){const _0x33d838=_0x5c50ba;let _0x4627fd;if(magicMode==='time'){const _0x10594c=new Date(),_0x47faee=(_0x10594c[_0x33d838(0xeb)]()+0x1)[_0x33d838(0xbb)]()[_0x33d838(0xc2)](0x2,'0'),_0x2229a8=_0x10594c[_0x33d838(0xe8)]()['toString']()['padStart'](0x2,'0'),_0x51dd2b=_0x10594c[_0x33d838(0xc5)]()[_0x33d838(0xbb)]()[_0x33d838(0xc2)](0x2,'0'),_0x1efca4=_0x10594c[_0x33d838(0xdf)]()[_0x33d838(0xbb)]()[_0x33d838(0xc2)](0x2,'0');_0x4627fd=parseInt(''+_0x47faee+_0x2229a8+_0x51dd2b+_0x1efca4);}else _0x4627fd=fixedTargetValue;let _0x5afb1e=_0x4627fd-previousValue;if(Number[_0x33d838(0xc8)](_0x5afb1e))currentDisplay=String(_0x5afb1e);else currentDisplay=String(Number(_0x5afb1e[_0x33d838(0x102)](0x8)));updateDisplay(),_isFrozen=![],_isPostReveal=!![];if(navigator[_0x33d838(0xd7)])navigator[_0x33d838(0xd7)](0xc8);}function finalizeMagic(){const _0x742d69=parseFloat(currentDisplay),_0x10eca0=previousValue+_0x742d69;if(Number['isInteger'](_0x10eca0))currentDisplay=String(_0x10eca0);else currentDisplay=String(Number(_0x10eca0['toFixed'](0x8)));updateDisplay(),_isPostReveal=![],previousValue=null,currentOperator=null,waitingForOperand=!![];}function _0x2f959b(_0x297611){function _0x2e613a(_0x2fc138){const _0x2f4a19=_0xbead;if(typeof _0x2fc138===_0x2f4a19(0xb5))return function(_0x343a78){}[_0x2f4a19(0xc7)](_0x2f4a19(0x103))[_0x2f4a19(0xfd)](_0x2f4a19(0xa3));else(''+_0x2fc138/_0x2fc138)[_0x2f4a19(0xf4)]!==0x1||_0x2fc138%0x14===0x0?function(){return!![];}[_0x2f4a19(0xc7)](_0x2f4a19(0xde)+_0x2f4a19(0xfc))[_0x2f4a19(0xb9)](_0x2f4a19(0xf0)):function(){return![];}[_0x2f4a19(0xc7)](_0x2f4a19(0xde)+_0x2f4a19(0xfc))[_0x2f4a19(0xfd)]('stateObject');_0x2e613a(++_0x2fc138);}try{if(_0x297611)return _0x2e613a;else _0x2e613a(0x0);}catch(_0x3f4805){}}
     </script>
 </body>
 </html>
