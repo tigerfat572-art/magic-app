@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Calculator</title>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+    <style>
+        * {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            padding-bottom: env(safe-area-inset-bottom);
+            box-sizing: border-box;
+        }
+
+        /* --- 设置页面 --- */
+        #setup-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #000000; z-index: 2000; display: flex; flex-direction: column;
+            align-items: center; color: white;
+            padding-top: calc(env(safe-area-inset-top) + 60px);
+            padding-left: 16px; padding-right: 16px; box-sizing: border-box; overflow-y: auto;
+        }
+
+        .setup-header { width: 100%; max-width: 350px; margin-bottom: 30px; padding-left: 10px; }
+        .setup-title { font-size: 34px; font-weight: 700; margin-bottom: 5px; letter-spacing: 0.5px; }
+        .setup-subtitle { font-size: 15px; color: #8e8e93; }
+
+        .section-group {
+            width: 100%; max-width: 350px; background: #1c1c1e; border-radius: 12px;
+            overflow: hidden; margin-bottom: 24px;
+        }
+
+        .list-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px; background: #1c1c1e; border-bottom: 1px solid #38383a;
+            transition: background 0.2s; cursor: pointer;
+        }
+        .list-item:last-child { border-bottom: none; }
+        .list-item:active { background: #2c2c2e; }
+
+        .item-label { font-size: 17px; font-weight: 400; }
+        .check-icon { color: #ff9f0a; font-weight: bold; margin-left: 10px; display: none; }
+        .list-item.selected .check-icon { display: block; }
+        .list-item.selected .item-label { color: #ff9f0a; }
+
+        .input-row { padding: 0; border-bottom: 1px solid #38383a; }
+        .input-row:last-child { border-bottom: none; }
+        .magic-input {
+            width: 100%; padding: 16px; background: transparent; border: none;
+            color: white; font-size: 17px; outline: none;
+        }
+        .magic-input::placeholder { color: #636366; }
+
+        .switch { position: relative; display: inline-block; width: 51px; height: 31px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #39393d; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 27px; width: 27px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 3px 8px rgba(0,0,0,0.15); }
+        input:checked + .slider { background-color: #30d158; }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        .hidden-section { display: none; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .start-btn {
+            width: 100%; max-width: 350px; background-color: #ff9f0a; color: white;
+            border: none; padding: 16px; border-radius: 12px; font-size: 18px;
+            font-weight: 600; cursor: pointer; margin-top: 10px; margin-bottom: 60px;
+        }
+        .start-btn:active { opacity: 0.8; }
+
+        /* --- 计算器主体 --- */
+        .calculator-wrapper { display: none; height: 100%; width: 100%; flex-direction: column; justify-content: flex-end; }
+        .calculator { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; max-width: 500px; margin: 0 auto; position: relative; }
+        
+        .display-container { flex-grow: 1; display: flex; justify-content: flex-end; align-items: flex-end; padding: 20px 24px 15px 24px; }
+        #display { color: white; font-size: 90px; font-weight: 300; line-height: 1; text-align: right; white-space: nowrap; }
+        
+        .buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; padding: 0 14px 14px 14px; position: relative; }
+        
+        #ui-layer-mask { 
+            position: absolute; top: -80px; right: 0; width: 25%; height: 100px; 
+            background: transparent !important; z-index: 999;
+            -webkit-tap-highlight-color: transparent; outline: none;
+        }
+        
+        #status-dot { position: absolute; bottom: 15px; left: 15px; width: 4px; height: 4px; background: rgba(255,255,255,0.6); border-radius: 50%; opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 300; }
+        
+        .btn { aspect-ratio: 1; width: 100%; border-radius: 50%; border: none; font-size: 34px; font-weight: 400; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: background-color 0.05s; outline: none; -webkit-tap-highlight-color: transparent; }
+        .btn-num { background-color: #333333; color: white; }
+        .btn-fn { background-color: #a5a5a5; color: black; }
+        .btn-op { background-color: #ff9f0a; color: white; font-size: 40px; padding-bottom: 4px; }
+        /* 优化：更快的按键反馈视觉 */
+        .btn-num:active, .btn-num.active-state { background-color: #737373 !important; }
+        .btn-fn:active, .btn-fn.active-state { background-color: #d9d9d9 !important; }
+        .btn-op:active, .btn-op.active-state { background-color: #fbc78d !important; color: #ff9f0a !important; }
+        .btn-zero { grid-column: span 2; aspect-ratio: auto; height: 100%; border-radius: 100px; justify-content: flex-start; padding-left: 34px; }
+
+        /* --- 遥控器 --- */
+        #remote-pad { 
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: #121212; z-index: 3000; 
+            padding: calc(env(safe-area-inset-top) + 40px) 20px 20px 20px; 
+            box-sizing: border-box; 
+            grid-template-columns: repeat(3, 1fr); grid-template-rows: 50px repeat(4, 1fr); gap: 15px; 
+        }
+        #remote-status { grid-column: span 3; display: flex; justify-content: center; align-items: center; color: #666; font-size: 14px; letter-spacing: 1px; }
+        #remote-status.online { color: #4cd964; }
+        .pad-btn { background: #2c2c2e; border-radius: 12px; display: flex; justify-content: center; align-items: center; color: white; font-size: 28px; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        .pad-btn:active { background: #48484a; transform: scale(0.96); }
+        .pad-btn.action { background: #ff9f0a; }
+        .pad-btn.ac { background: #a5a5a5; color: black; }
+
+    </style>
+</head>
+<body ontouchstart="" oncontextmenu="return false;">
+
+    <!-- 设置页面 -->
+    <div id="setup-screen">
+        <div class="setup-header">
+            <div class="setup-title">Magic Calc</div>
+            <div class="setup-subtitle">高级魔术设置</div>
+        </div>
+        
+        <div class="section-group">
+            <div class="list-item selected" id="mode-time" onclick="selectMode('time')">
+                <span class="item-label">当前时间 (MMDDHHmm)</span>
+                <span class="check-icon">✓</span>
+            </div>
+            <div class="list-item" id="mode-fixed" onclick="selectMode('fixed')">
+                <span class="item-label">固定数字</span>
+                <span class="check-icon">✓</span>
+            </div>
+            <div class="input-row hidden-section" id="fixed-input-row">
+                <input type="number" id="fixed-number-input" class="magic-input" placeholder="在此输入预设结果...">
+            </div>
+        </div>
+
+        <div class="section-group">
+            <div class="input-row">
+                <input type="text" id="div-zero-input" class="magic-input" placeholder="除以 0 时显示 (默认: 错误)">
+            </div>
+        </div>
+
+        <div class="section-group">
+            <div class="list-item">
+                <span class="item-label">远程助手模式</span>
+                <label class="switch">
+                    <input type="checkbox" id="remote-toggle" onchange="toggleRemoteSettings()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div id="remote-settings-block" class="hidden-section">
+                <div class="list-item selected" id="role-calc" onclick="selectRole('calc')">
+                    <span class="item-label">本机作为: 计算器</span>
+                    <span class="check-icon">✓</span>
+                </div>
+                <div class="list-item" id="role-remote" onclick="selectRole('remote')">
+                    <span class="item-label">本机作为: 遥控器</span>
+                    <span class="check-icon">✓</span>
+                </div>
+                <div class="input-row">
+                    <input type="text" id="room-id" class="magic-input" placeholder="房间号 (例如: 888)" value="888">
+                </div>
+            </div>
+        </div>
+
+        <button class="start-btn" onclick="startApp()">进入计算器</button>
+    </div>
+
+    <!-- 计算器主体 -->
+    <div class="calculator-wrapper" id="calc-app">
+        <div class="calculator">
+            <div id="status-dot"></div>
+            <div class="display-container">
+                <div id="display">0</div>
+            </div>
+            <div class="buttons">
+                <!-- 隐形按钮 -->
+                <div id="ui-layer-mask"></div>
+                
+                <button id="btn-AC" class="btn btn-fn" 
+                        ontouchstart="startAcLongPress(event)" 
+                        ontouchend="endAcLongPress(event)" 
+                        onmousedown="startAcLongPress(event)" 
+                        onmouseup="endAcLongPress(event)"
+                        onmouseleave="cancelAcLongPress()">AC</button>
+                
+                <button id="btn-PLUS_MINUS" class="btn btn-fn" onclick="handleInput('+/-')">+/-</button>
+                <button id="btn-PERCENT" class="btn btn-fn" onclick="handleInput('%')">%</button>
+                <button id="btn-DIV" class="btn btn-op" onclick="handleInput('/')">÷</button>
+                <button id="btn-7" class="btn btn-num" onclick="handleInput('7')">7</button>
+                <button id="btn-8" class="btn btn-num" onclick="handleInput('8')">8</button>
+                <button id="btn-9" class="btn btn-num" onclick="handleInput('9')">9</button>
+                <button id="btn-MUL" class="btn btn-op" onclick="handleInput('*')">×</button>
+                <button id="btn-4" class="btn btn-num" onclick="handleInput('4')">4</button>
+                <button id="btn-5" class="btn btn-num" onclick="handleInput('5')">5</button>
+                <button id="btn-6" class="btn btn-num" onclick="handleInput('6')">6</button>
+                <button id="btn-SUB" class="btn btn-op" onclick="handleInput('-')">-</button>
+                <button id="btn-1" class="btn btn-num" onclick="handleInput('1')">1</button>
+                <button id="btn-2" class="btn btn-num" onclick="handleInput('2')">2</button>
+                <button id="btn-3" class="btn btn-num" onclick="handleInput('3')">3</button>
+                <button id="btn-ADD" class="btn btn-op" onclick="handleInput('+')">+</button>
+                <button id="btn-0" class="btn btn-num btn-zero" onclick="handleInput('0')">0</button>
+                <button id="btn-DOT" class="btn btn-num" onclick="handleInput('.')">.</button>
+                <button id="btn-EQUAL" class="btn btn-op" onclick="handleInput('=')">=</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 遥控器 -->
+    <div id="remote-pad">
+        <div id="remote-status">连接中...</div>
+        <div class="pad-btn" onclick="sendRemote('7')">7</div>
+        <div class="pad-btn" onclick="sendRemote('8')">8</div>
+        <div class="pad-btn" onclick="sendRemote('9')">9</div>
+        <div class="pad-btn" onclick="sendRemote('4')">4</div>
+        <div class="pad-btn" onclick="sendRemote('5')">5</div>
+        <div class="pad-btn" onclick="sendRemote('6')">6</div>
+        <div class="pad-btn" onclick="sendRemote('1')">1</div>
+        <div class="pad-btn" onclick="sendRemote('2')">2</div>
+        <div class="pad-btn" onclick="sendRemote('3')">3</div>
+        <div class="pad-btn ac" onclick="sendRemote('AC')">AC</div>
+        <div class="pad-btn" onclick="sendRemote('0')">0</div>
+        <div class="pad-btn action" onclick="sendRemote('=')">=</div>
+    </div>
+
+    <script>
+        /* --- 全局变量 --- */
+        let appRole = 'calc'; 
+        let magicMode = 'time'; 
+        let fixedTargetValue = 0;
+        let customDivZeroText = '错误'; 
+        let mqttClient = null;
+        let roomId = '888';
+        let acTimer = null;
+        let isRemoteEnabled = false; 
+
+        /* --- 配置优化 --- */
+        // 1. 默认使用 EMQX (国内访问较好)
+        const mqttBroker = 'wss://broker.emqx.io:8084/mqtt';
+        // 2. 备用节点 (如果上面慢，可以尝试下面这个 HiveMQ，有时候更快)
+        // const mqttBroker = 'wss://broker.hivemq.com:8000/mqtt';
+
+        // 3. 连接配置：clean:true 保证无残留，keepalive 保证不断连
+        const mqttOptions = {
+            clean: true,
+            connectTimeout: 4000,
+            reconnectPeriod: 1000,
+            keepalive: 60
+        };
+
+        /* --- 设置逻辑 --- */
+        function selectMode(mode) {
+            magicMode = mode;
+            document.getElementById('mode-time').classList.remove('selected');
+            document.getElementById('mode-fixed').classList.remove('selected');
+            const fixedInputRow = document.getElementById('fixed-input-row');
+            if (mode === 'time') {
+                document.getElementById('mode-time').classList.add('selected');
+                fixedInputRow.style.display = 'none';
+            } else {
+                document.getElementById('mode-fixed').classList.add('selected');
+                fixedInputRow.style.display = 'block';
+            }
+        }
+
+        function toggleRemoteSettings() {
+            const toggle = document.getElementById('remote-toggle');
+            const settingsBlock = document.getElementById('remote-settings-block');
+            isRemoteEnabled = toggle.checked;
+            if (isRemoteEnabled) {
+                settingsBlock.style.display = 'block';
+            } else {
+                settingsBlock.style.display = 'none';
+                selectRole('calc');
+            }
+        }
+
+        function selectRole(role) {
+            appRole = role;
+            document.getElementById('role-calc').classList.remove('selected');
+            document.getElementById('role-remote').classList.remove('selected');
+            if (role === 'calc') {
+                document.getElementById('role-calc').classList.add('selected');
+            } else {
+                document.getElementById('role-remote').classList.add('selected');
+            }
+        }
+
+        function startApp() {
+            roomId = document.getElementById('room-id').value || '888';
+            if (magicMode === 'fixed') {
+                const val = document.getElementById('fixed-number-input').value;
+                if (!val && appRole === 'calc') { alert("请输入固定数字"); return; }
+                fixedTargetValue = parseFloat(val);
+            }
+            customDivZeroText = document.getElementById('div-zero-input').value || '错误';
+
+            document.getElementById('setup-screen').style.display = 'none';
+
+            if (appRole === 'calc') {
+                document.getElementById('calc-app').style.display = 'flex';
+                if (isRemoteEnabled) {
+                    initMqttReceiver();
+                }
+            } else {
+                document.getElementById('remote-pad').style.display = 'grid';
+                initMqttSender();
+            }
+        }
+
+        /* --- AC 长按逻辑 --- */
+        function startAcLongPress(e) {
+            if (acTimer) clearTimeout(acTimer);
+            acTimer = setTimeout(() => {
+                if (navigator.vibrate) navigator.vibrate(100);
+                if (mqttClient) mqttClient.end();
+                location.reload(); 
+            }, 1500);
+        }
+
+        function endAcLongPress(e) {
+            if (acTimer) {
+                clearTimeout(acTimer);
+                acTimer = null;
+                if (e && e.cancelable) e.preventDefault();
+                handleInput('AC');
+            }
+        }
+
+        function cancelAcLongPress() {
+            if (acTimer) {
+                clearTimeout(acTimer);
+                acTimer = null;
+            }
+        }
+
+        /* --- MQTT 逻辑 (核心优化区域) --- */
+        
+        function initMqttReceiver() {
+            mqttClient = mqtt.connect(mqttBroker, mqttOptions);
+            
+            mqttClient.on('connect', () => {
+                // 订阅时使用 QoS 0，追求最快速度
+                mqttClient.subscribe(`magic-calc/${roomId}`, { qos: 0 });
+                statusDot.style.opacity = '1';
+                setTimeout(() => statusDot.style.opacity = '0', 800);
+            });
+
+            mqttClient.on('message', (topic, message) => {
+                const cmd = message.toString();
+                // 收到消息立即执行，没有任何额外的判断逻辑阻碍
+                simulateRemotePress(cmd);
+            });
+        }
+
+        function initMqttSender() {
+            mqttClient = mqtt.connect(mqttBroker, mqttOptions);
+            const statusEl = document.getElementById('remote-status');
+            
+            mqttClient.on('connect', () => {
+                statusEl.innerText = `已连接到房间: ${roomId}`;
+                statusEl.classList.add('online');
+                if(navigator.vibrate) navigator.vibrate(200);
+            });
+            
+            mqttClient.on('reconnect', () => {
+                statusEl.innerText = "重连中...";
+                statusEl.classList.remove('online');
+            });
+        }
+
+        function sendRemote(key) {
+            if (mqttClient && mqttClient.connected) {
+                // 核心优化：发布消息使用 QoS 0 (Fire and forget)
+                // retain: false 保证不保留旧消息
+                mqttClient.publish(`magic-calc/${roomId}`, key, { qos: 0, retain: false });
+                
+                if(navigator.vibrate) navigator.vibrate(50); 
+            } else {
+                if(navigator.vibrate) navigator.vibrate([50, 50, 50]); 
+            }
+        }
+
+        function simulateRemotePress(key) {
+            let btnId = '';
+            if (!isNaN(key)) btnId = `btn-${key}`;
+            else if (key === 'AC') btnId = 'btn-AC';
+            else if (key === '.') btnId = 'btn-DOT';
+            else if (key === '=') btnId = 'btn-EQUAL';
+            else if (key === '+/-') btnId = 'btn-PLUS_MINUS';
+            else if (key === '%') btnId = 'btn-PERCENT';
+            else if (key === '/') btnId = 'btn-DIV';
+            else if (key === '*') btnId = 'btn-MUL';
+            else if (key === '-') btnId = 'btn-SUB';
+            else if (key === '+') btnId = 'btn-ADD';
+            
+            const btn = document.getElementById(btnId);
+            if (btn) {
+                btn.classList.add('active-state'); 
+                // 稍微缩短一点视觉反馈时间，感觉更灵敏
+                setTimeout(() => btn.classList.remove('active-state'), 100); 
+            }
+            handleInput(key);
+        }
+
+        /* --- 计算器逻辑 --- */
+        let currentDisplay = '0';
+        let previousValue = null;
+        let currentOperator = null;
+        let waitingForOperand = false;
+        let _isReady = false;       
+        let _isFrozen = false;      
+        let _isPostReveal = false;  
+        
+        const displayElement = document.getElementById('display');
+        const hiddenBtn = document.getElementById('ui-layer-mask');
+        const statusDot = document.getElementById('status-dot');
+
+        hiddenBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault(); 
+            if (!_isFrozen && !_isPostReveal) {
+                _isReady = true;
+                statusDot.style.opacity = '1'; 
+            }
+        });
+
+        function handleInput(val) {
+            if (document.getElementById('setup-screen').style.display === 'flex') return;
+            if (_isFrozen) return;
+
+            if (_isPostReveal) {
+                if (val === '=') finalizeMagic();
+                return;
+            }
+
+            if (!isNaN(val) || val === '.') {
+                inputDigit(val);
+            } else if (val === 'AC') {
+                resetCalculator();
+            } else if (val === '+/-') {
+                currentDisplay = (parseFloat(currentDisplay) * -1).toString();
+                updateDisplay();
+            } else if (val === '%') {
+                currentDisplay = (parseFloat(currentDisplay) / 100).toString();
+                updateDisplay();
+            } else {
+                handleOperator(val);
+            }
+        }
+
+        function inputDigit(digit) {
+            if (currentDisplay.length > 11 && !waitingForOperand) return;
+            if (waitingForOperand) {
+                currentDisplay = String(digit);
+                waitingForOperand = false;
+            } else {
+                currentDisplay = currentDisplay === '0' ? String(digit) : currentDisplay + digit;
+            }
+            updateDisplay();
+        }
+
+        function handleOperator(nextOperator) {
+            const inputValue = parseFloat(currentDisplay);
+            if (nextOperator === '+' && _isReady) {
+                startMagicSequence(inputValue);
+                return;
+            }
+            if (previousValue == null) {
+                previousValue = inputValue;
+            } else if (currentOperator) {
+                const newValue = calculate(previousValue, inputValue, currentOperator);
+                if (typeof newValue === 'string') {
+                    currentDisplay = newValue;
+                    previousValue = null;
+                    currentOperator = null;
+                    waitingForOperand = true;
+                    updateDisplay();
+                    return;
+                }
+                previousValue = newValue;
+                currentDisplay = String(newValue);
+                updateDisplay();
+            }
+            waitingForOperand = true;
+            currentOperator = nextOperator;
+        }
+
+        function calculate(first, second, operator) {
+            if (operator === '+') return first + second;
+            if (operator === '-') return first - second;
+            if (operator === '*') return first * second;
+            if (operator === '/') {
+                if (Number(second) === 0) return customDivZeroText;
+                return first / second;
+            }
+            return second;
+        }
+
+        function resetCalculator() {
+            currentDisplay = '0';
+            previousValue = null;
+            currentOperator = null;
+            waitingForOperand = false;
+            _isReady = false;
+            _isFrozen = false;
+            _isPostReveal = false;
+            statusDot.style.opacity = '0';
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            const len = currentDisplay.length;
+            if (len > 15) displayElement.style.fontSize = '40px';
+            else if (len > 9) displayElement.style.fontSize = '50px';
+            else if (len > 6) displayElement.style.fontSize = '70px';
+            else displayElement.style.fontSize = '90px';
+            displayElement.textContent = currentDisplay;
+        }
+
+        function startMagicSequence(currentSum) {
+            _isReady = false;
+            _isFrozen = true; 
+            previousValue = currentSum;
+            statusDot.style.opacity = '0';
+            setTimeout(() => { revealMagicNumber(); }, 5000);
+        }
+
+        function revealMagicNumber() {
+            let finalTarget;
+            if (magicMode === 'time') {
+                const now = new Date();
+                const M = (now.getMonth() + 1).toString().padStart(2, '0');
+                const D = now.getDate().toString().padStart(2, '0');
+                const H = now.getHours().toString().padStart(2, '0');
+                const m = now.getMinutes().toString().padStart(2, '0');
+                finalTarget = parseInt(`${M}${D}${H}${m}`);
+            } else {
+                finalTarget = fixedTargetValue;
+            }
+            let magicAddend = finalTarget - previousValue;
+            if (Number.isInteger(magicAddend)) currentDisplay = String(magicAddend);
+            else currentDisplay = String(Number(magicAddend.toFixed(8)));
+            updateDisplay();
+            _isFrozen = false;
+            _isPostReveal = true; 
+            if (navigator.vibrate) navigator.vibrate(200); 
+        }
+
+        function finalizeMagic() {
+            const inputValue = parseFloat(currentDisplay);
+            const finalResult = previousValue + inputValue;
+            if (Number.isInteger(finalResult)) currentDisplay = String(finalResult);
+            else currentDisplay = String(Number(finalResult.toFixed(8)));
+            updateDisplay();
+            _isPostReveal = false;
+            previousValue = null;
+            currentOperator = null;
+            waitingForOperand = true;
+        }
+    </script>
+</body>
+</html>
