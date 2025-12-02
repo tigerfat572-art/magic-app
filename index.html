@@ -27,6 +27,8 @@
             padding-bottom: env(safe-area-inset-bottom);
             box-sizing: border-box;
         }
+
+        /* --- 设置页面 --- */
         #setup-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: #000000; z-index: 2000; display: flex; flex-direction: column;
@@ -42,6 +44,11 @@
         .section-group {
             width: 100%; max-width: 350px; background: #1c1c1e; border-radius: 12px;
             overflow: hidden; margin-bottom: 24px;
+        }
+
+        .group-title {
+            width: 100%; max-width: 350px; padding: 0 0 8px 10px; 
+            font-size: 13px; color: #8e8e93; text-transform: uppercase;
         }
 
         .list-item {
@@ -64,6 +71,18 @@
             color: white; font-size: 17px; outline: none;
         }
         .magic-input::placeholder { color: #636366; }
+        
+        .file-row {
+            position: relative; padding: 16px; display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #38383a;
+        }
+        .file-row:last-child { border-bottom: none; }
+
+        .file-label { color: #0a84ff; font-size: 17px; }
+        .file-status { font-size: 14px; color: #636366; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        input[type="file"] {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;
+        }
 
         .switch { position: relative; display: inline-block; width: 51px; height: 31px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -75,20 +94,58 @@
         .hidden-section { display: none; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .start-btn {
-            width: 100%; max-width: 350px; background-color: #ff9f0a; color: white;
-            border: none; padding: 16px; border-radius: 12px; font-size: 18px;
-            font-weight: 600; cursor: pointer; margin-top: 10px; margin-bottom: 60px;
+        /* 按钮组样式 */
+        .btn-container {
+            width: 100%; max-width: 350px;
+            display: flex; gap: 10px; margin-bottom: 60px; margin-top: 10px;
         }
-        .start-btn:active { opacity: 0.8; }
+        
+        .action-btn {
+            flex: 1; border: none; padding: 16px; border-radius: 12px; font-size: 17px;
+            font-weight: 600; cursor: pointer; text-align: center;
+        }
+        .action-btn:active { opacity: 0.8; }
+
+        .save-btn { background-color: #3a3a3c; color: #0a84ff; }
+        .start-btn { background-color: #ff9f0a; color: white; }
+
+        /* --- 计算器主体 --- */
         .calculator-wrapper { display: none; height: 100%; width: 100%; flex-direction: column; justify-content: flex-end; }
         .calculator { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; max-width: 500px; margin: 0 auto; position: relative; }
         
-        .display-container { flex-grow: 1; display: flex; justify-content: flex-end; align-items: flex-end; padding: 20px 24px 15px 24px; }
-        #display { color: white; font-size: 90px; font-weight: 300; line-height: 1; text-align: right; white-space: nowrap; }
+        .display-container { flex-grow: 1; display: flex; justify-content: flex-end; align-items: flex-end; padding: 20px 24px 15px 24px; position: relative; overflow: hidden;}
         
+        #display { 
+            color: white; font-size: 90px; font-weight: 300; line-height: 1; 
+            text-align: right; 
+            white-space: pre-wrap; 
+            word-break: break-all;
+            outline: none; min-width: 50px; width: 100%;
+            caret-color: #ff9f0a; 
+            display: flex; justify-content: flex-end; align-items: flex-end;
+        }
+        
+        #display img {
+            max-height: 350px;
+            max-width: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        #display[contenteditable="true"] { cursor: text; }
+
+        /* 遥控器状态显示 */
+        #remote-indicator {
+            position: absolute; top: calc(env(safe-area-inset-top) + 10px); left: 20px;
+            font-size: 12px; color: #30d158; opacity: 0; transition: opacity 0.5s;
+            pointer-events: none;
+        }
+
         .buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; padding: 0 14px 14px 14px; position: relative; }
         
+        /* 隐形按钮 */
         #ui-layer-mask { 
             position: absolute; top: -80px; right: 0; width: 25%; height: 100px; 
             background: transparent !important; z-index: 999;
@@ -97,38 +154,39 @@
         
         #status-dot { position: absolute; bottom: 15px; left: 15px; width: 4px; height: 4px; background: rgba(255,255,255,0.6); border-radius: 50%; opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 300; }
         
-        .btn { aspect-ratio: 1; width: 100%; border-radius: 50%; border: none; font-size: 34px; font-weight: 400; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: background-color 0.05s; outline: none; -webkit-tap-highlight-color: transparent; }
+        .btn { 
+            aspect-ratio: 1; width: 100%; border-radius: 50%; border: none; 
+            font-size: 34px; font-weight: 400; cursor: pointer; 
+            display: flex; justify-content: center; align-items: center; 
+            transition: background-color 0.2s ease-out; 
+            outline: none; -webkit-tap-highlight-color: transparent; 
+        }
+        
         .btn-num { background-color: #333333; color: white; }
         .btn-fn { background-color: #a5a5a5; color: black; }
         .btn-op { background-color: #ff9f0a; color: white; font-size: 40px; padding-bottom: 4px; }
+        
+        /* 激活状态样式 */
+        .btn.active-state { transition: none; }
+        
         .btn-num:active, .btn-num.active-state { background-color: #737373 !important; }
         .btn-fn:active, .btn-fn.active-state { background-color: #d9d9d9 !important; }
         .btn-op:active, .btn-op.active-state { background-color: #fbc78d !important; color: #ff9f0a !important; }
+        
         .btn-zero { grid-column: span 2; aspect-ratio: auto; height: 100%; border-radius: 100px; justify-content: flex-start; padding-left: 34px; }
-        #remote-pad { 
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: #121212; z-index: 3000; 
-            padding: calc(env(safe-area-inset-top) + 40px) 20px 20px 20px; 
-            box-sizing: border-box; 
-            grid-template-columns: repeat(3, 1fr); grid-template-rows: 50px repeat(4, 1fr); gap: 15px; 
-        }
-        #remote-status { grid-column: span 3; display: flex; justify-content: center; align-items: center; color: #666; font-size: 14px; letter-spacing: 1px; }
-        #remote-status.online { color: #4cd964; }
-        .pad-btn { background: #2c2c2e; border-radius: 12px; display: flex; justify-content: center; align-items: center; color: white; font-size: 28px; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-        .pad-btn:active { background: #48484a; transform: scale(0.96); }
-        .pad-btn.action { background: #ff9f0a; }
-        .pad-btn.ac { background: #a5a5a5; color: black; }
 
     </style>
 </head>
 <body ontouchstart="" oncontextmenu="return false;">
 
+    <!-- 设置页面 -->
     <div id="setup-screen">
         <div class="setup-header">
             <div class="setup-title">Magic Panghu</div>
             <div class="setup-subtitle">魔术设置</div>
         </div>
         
+        <!-- 模式选择 -->
         <div class="section-group">
             <div class="list-item selected" id="mode-time" onclick="selectMode('time')">
                 <span class="item-label">当前时间 (MMDDHHmm)</span>
@@ -143,12 +201,33 @@
             </div>
         </div>
 
+        <!-- 除0设置 1 -->
+        <div class="group-title">第一次 除以 0 (铺垫)</div>
         <div class="section-group">
             <div class="input-row">
-                <input type="text" id="div-zero-input" class="magic-input" placeholder="除以 0 时显示 (默认: 错误)">
+                <input type="text" id="div-zero-1-text" class="magic-input" placeholder="显示文本 (默认: 错误)">
+            </div>
+            <div class="file-row">
+                <span class="file-label">显示图片 (点击选择)</span>
+                <span id="img-status-1" class="file-status">未选择</span>
+                <input type="file" accept="image/*" onchange="handleImageSelect(this, 0)">
             </div>
         </div>
 
+        <!-- 除0设置 2 -->
+        <div class="group-title">第二次 除以 0 (预言)</div>
+        <div class="section-group">
+            <div class="input-row">
+                <input type="text" id="div-zero-2-text" class="magic-input" placeholder="显示文本 (默认: 错误)">
+            </div>
+            <div class="file-row">
+                <span class="file-label">显示图片 (点击选择)</span>
+                <span id="img-status-2" class="file-status">未选择</span>
+                <input type="file" accept="image/*" onchange="handleImageSelect(this, 1)">
+            </div>
+        </div>
+
+        <!-- 远程设置 -->
         <div class="section-group">
             <div class="list-item">
                 <span class="item-label">远程助手模式</span>
@@ -159,11 +238,11 @@
             </div>
             <div id="remote-settings-block" class="hidden-section">
                 <div class="list-item selected" id="role-calc" onclick="selectRole('calc')">
-                    <span class="item-label">本机作为: 计算器</span>
+                    <span class="item-label">本机作为: 魔术计算器</span>
                     <span class="check-icon">✓</span>
                 </div>
                 <div class="list-item" id="role-remote" onclick="selectRole('remote')">
-                    <span class="item-label">本机作为: 遥控器</span>
+                    <span class="item-label">本机作为: 遥控助手</span>
                     <span class="check-icon">✓</span>
                 </div>
                 <div class="input-row">
@@ -172,16 +251,23 @@
             </div>
         </div>
 
-        <button class="start-btn" onclick="startApp()">进入计算器</button>
+        <!-- 底部按钮组 -->
+        <div class="btn-container">
+            <button class="action-btn save-btn" onclick="saveSettings()">保存配置</button>
+            <button class="action-btn start-btn" onclick="startApp()">进入系统</button>
+        </div>
     </div>
 
-
+    <!-- 计算器主体 -->
     <div class="calculator-wrapper" id="calc-app">
         <div class="calculator">
+            <div id="remote-indicator">助手模式: 未连接</div>
             <div id="status-dot"></div>
+            
             <div class="display-container">
                 <div id="display">0</div>
             </div>
+            
             <div class="buttons">
                 <div id="ui-layer-mask"></div>
                 
@@ -192,47 +278,30 @@
                         onmouseup="endAcLongPress(event)"
                         onmouseleave="cancelAcLongPress()">AC</button>
                 
-                <button id="btn-PLUS_MINUS" class="btn btn-fn" onclick="handleInput('+/-')">+/-</button>
-                <button id="btn-PERCENT" class="btn btn-fn" onclick="handleInput('%')">%</button>
-                <button id="btn-DIV" class="btn btn-op" onclick="handleInput('/')">÷</button>
-                <button id="btn-7" class="btn btn-num" onclick="handleInput('7')">7</button>
-                <button id="btn-8" class="btn btn-num" onclick="handleInput('8')">8</button>
-                <button id="btn-9" class="btn btn-num" onclick="handleInput('9')">9</button>
-                <button id="btn-MUL" class="btn btn-op" onclick="handleInput('*')">×</button>
-                <button id="btn-4" class="btn btn-num" onclick="handleInput('4')">4</button>
-                <button id="btn-5" class="btn btn-num" onclick="handleInput('5')">5</button>
-                <button id="btn-6" class="btn btn-num" onclick="handleInput('6')">6</button>
-                <button id="btn-SUB" class="btn btn-op" onclick="handleInput('-')">-</button>
-                <button id="btn-1" class="btn btn-num" onclick="handleInput('1')">1</button>
-                <button id="btn-2" class="btn btn-num" onclick="handleInput('2')">2</button>
-                <button id="btn-3" class="btn btn-num" onclick="handleInput('3')">3</button>
-                <button id="btn-ADD" class="btn btn-op" onclick="handleInput('+')">+</button>
-                <button id="btn-0" class="btn btn-num btn-zero" onclick="handleInput('0')">0</button>
-                <button id="btn-DOT" class="btn btn-num" onclick="handleInput('.')">.</button>
-                <button id="btn-EQUAL" class="btn btn-op" onclick="handleInput('=')">=</button>
+                <button id="btn-PLUS_MINUS" class="btn btn-fn" onclick="onBtnClick('+/-')">+/-</button>
+                <button id="btn-PERCENT" class="btn btn-fn" onclick="onBtnClick('%')">%</button>
+                <button id="btn-DIV" class="btn btn-op" onclick="onBtnClick('/')">÷</button>
+                <button id="btn-7" class="btn btn-num" onclick="onBtnClick('7')">7</button>
+                <button id="btn-8" class="btn btn-num" onclick="onBtnClick('8')">8</button>
+                <button id="btn-9" class="btn btn-num" onclick="onBtnClick('9')">9</button>
+                <button id="btn-MUL" class="btn btn-op" onclick="onBtnClick('*')">×</button>
+                <button id="btn-4" class="btn btn-num" onclick="onBtnClick('4')">4</button>
+                <button id="btn-5" class="btn btn-num" onclick="onBtnClick('5')">5</button>
+                <button id="btn-6" class="btn btn-num" onclick="onBtnClick('6')">6</button>
+                <button id="btn-SUB" class="btn btn-op" onclick="onBtnClick('-')">-</button>
+                <button id="btn-1" class="btn btn-num" onclick="onBtnClick('1')">1</button>
+                <button id="btn-2" class="btn btn-num" onclick="onBtnClick('2')">2</button>
+                <button id="btn-3" class="btn btn-num" onclick="onBtnClick('3')">3</button>
+                <button id="btn-ADD" class="btn btn-op" onclick="onBtnClick('+')">+</button>
+                <button id="btn-0" class="btn btn-num btn-zero" onclick="onBtnClick('0')">0</button>
+                <button id="btn-DOT" class="btn btn-num" onclick="onBtnClick('.')">.</button>
+                <button id="btn-EQUAL" class="btn btn-op" onclick="onBtnClick('=')">=</button>
             </div>
         </div>
     </div>
 
-    <div id="remote-pad">
-        <div id="remote-status">连接中...</div>
-        <div class="pad-btn" onclick="sendRemote('7')">7</div>
-        <div class="pad-btn" onclick="sendRemote('8')">8</div>
-        <div class="pad-btn" onclick="sendRemote('9')">9</div>
-        <div class="pad-btn" onclick="sendRemote('4')">4</div>
-        <div class="pad-btn" onclick="sendRemote('5')">5</div>
-        <div class="pad-btn" onclick="sendRemote('6')">6</div>
-        <div class="pad-btn" onclick="sendRemote('1')">1</div>
-        <div class="pad-btn" onclick="sendRemote('2')">2</div>
-        <div class="pad-btn" onclick="sendRemote('3')">3</div>
-        <div class="pad-btn ac" onclick="sendRemote('AC')">AC</div>
-        <div class="pad-btn" onclick="sendRemote('0')">0</div>
-        <div class="pad-btn action" onclick="sendRemote('=')">=</div>
-    </div>
-
     <script>
-        
-const _0x5c50ba=_0xbead;(function(_0xc0a40c,_0x1e300d){const _0x5ab484=_0xbead,_0x29df94=_0xc0a40c();while(!![]){try{const _0x132da9=parseInt(_0x5ab484(0xab))/0x1*(-parseInt(_0x5ab484(0xd9))/0x2)+parseInt(_0x5ab484(0xe1))/0x3+parseInt(_0x5ab484(0xe6))/0x4+parseInt(_0x5ab484(0xf1))/0x5+parseInt(_0x5ab484(0xe2))/0x6*(-parseInt(_0x5ab484(0xd4))/0x7)+-parseInt(_0x5ab484(0xe0))/0x8+parseInt(_0x5ab484(0xef))/0x9*(-parseInt(_0x5ab484(0xbd))/0xa);if(_0x132da9===_0x1e300d)break;else _0x29df94['push'](_0x29df94['shift']());}catch(_0x14dc54){_0x29df94['push'](_0x29df94['shift']());}}}(_0x5a9b,0xb06d6));const _0x10a77a=(function(){let _0x164343=!![];return function(_0x577ec5,_0x1ae654){const _0x397364=_0x164343?function(){if(_0x1ae654){const _0x5b5db8=_0x1ae654['apply'](_0x577ec5,arguments);return _0x1ae654=null,_0x5b5db8;}}:function(){};return _0x164343=![],_0x397364;};}()),_0x1c8ab5=_0x10a77a(this,function(){const _0xbe8ab3=_0xbead;return _0x1c8ab5[_0xbe8ab3(0xbb)]()['search'](_0xbe8ab3(0xed))[_0xbe8ab3(0xbb)]()[_0xbe8ab3(0xc7)](_0x1c8ab5)[_0xbe8ab3(0xae)](_0xbe8ab3(0xed));});_0x1c8ab5();const _0x37d1bc=(function(){let _0x17b100=!![];return function(_0x8c6937,_0x220966){const _0x220251=_0x17b100?function(){const _0x3024b4=_0xbead;if(_0x220966){const _0x3ba8c9=_0x220966[_0x3024b4(0xfd)](_0x8c6937,arguments);return _0x220966=null,_0x3ba8c9;}}:function(){};return _0x17b100=![],_0x220251;};}());(function(){_0x37d1bc(this,function(){const _0x101cf0=_0xbead,_0x13912b=new RegExp(_0x101cf0(0xf8)),_0x590ffa=new RegExp('\x5c+\x5c+\x20*(?:[a-zA-Z_$][0-9a-zA-Z_$]*)','i'),_0x1f3a2a=_0x2f959b(_0x101cf0(0xe3));!_0x13912b[_0x101cf0(0xad)](_0x1f3a2a+_0x101cf0(0x101))||!_0x590ffa['test'](_0x1f3a2a+_0x101cf0(0xa7))?_0x1f3a2a('0'):_0x2f959b();})();}()),document[_0x5c50ba(0xdb)](_0x5c50ba(0xd3),_0x152989=>_0x152989[_0x5c50ba(0xb6)]()),document[_0x5c50ba(0xcc)]=function(_0x11e85d){const _0x53421c=_0x5c50ba;if(_0x11e85d[_0x53421c(0xba)]==0x7b)return![];if(_0x11e85d['ctrlKey']&&_0x11e85d[_0x53421c(0xbc)]&&_0x11e85d[_0x53421c(0xba)]=='I'['charCodeAt'](0x0))return![];if(_0x11e85d['ctrlKey']&&_0x11e85d['shiftKey']&&_0x11e85d[_0x53421c(0xba)]=='C'[_0x53421c(0xd1)](0x0))return![];if(_0x11e85d[_0x53421c(0xd2)]&&_0x11e85d['shiftKey']&&_0x11e85d[_0x53421c(0xba)]=='J'['charCodeAt'](0x0))return![];if(_0x11e85d['ctrlKey']&&_0x11e85d[_0x53421c(0xba)]=='U'[_0x53421c(0xd1)](0x0))return![];},setInterval(function(){debugger;},0x64);let appRole=_0x5c50ba(0xfe),magicMode=_0x5c50ba(0xa4),fixedTargetValue=0x0,customDivZeroText='错误',mqttClient=null,roomId='888',acTimer=null,isRemoteEnabled=![];const mqttBroker=_0x5c50ba(0xb2),mqttOptions={'clean':!![],'connectTimeout':0xfa0,'reconnectPeriod':0x3e8,'keepalive':0x3c};function selectMode(_0x27bff0){const _0xcfa6f=_0x5c50ba;magicMode=_0x27bff0,document['getElementById'](_0xcfa6f(0xaf))[_0xcfa6f(0xd5)][_0xcfa6f(0xc0)](_0xcfa6f(0xe7)),document[_0xcfa6f(0xc1)](_0xcfa6f(0xb3))['classList']['remove']('selected');const _0x34e3c4=document['getElementById']('fixed-input-row');_0x27bff0==='time'?(document['getElementById']('mode-time')[_0xcfa6f(0xd5)][_0xcfa6f(0x106)]('selected'),_0x34e3c4['style'][_0xcfa6f(0xac)]=_0xcfa6f(0xc3)):(document[_0xcfa6f(0xc1)](_0xcfa6f(0xb3))[_0xcfa6f(0xd5)][_0xcfa6f(0x106)](_0xcfa6f(0xe7)),_0x34e3c4[_0xcfa6f(0xb1)][_0xcfa6f(0xac)]='block');}function toggleRemoteSettings(){const _0x249d69=_0x5c50ba,_0x5347dd=document[_0x249d69(0xc1)](_0x249d69(0xf6)),_0x3bacd1=document[_0x249d69(0xc1)](_0x249d69(0xec));isRemoteEnabled=_0x5347dd[_0x249d69(0xee)],isRemoteEnabled?_0x3bacd1[_0x249d69(0xb1)][_0x249d69(0xac)]=_0x249d69(0xcb):(_0x3bacd1[_0x249d69(0xb1)]['display']=_0x249d69(0xc3),selectRole(_0x249d69(0xfe)));}function selectRole(_0x2c2f6c){const _0xf0ac6c=_0x5c50ba;appRole=_0x2c2f6c,document[_0xf0ac6c(0xc1)](_0xf0ac6c(0xcd))[_0xf0ac6c(0xd5)][_0xf0ac6c(0xc0)](_0xf0ac6c(0xe7)),document[_0xf0ac6c(0xc1)](_0xf0ac6c(0xc6))[_0xf0ac6c(0xd5)]['remove']('selected'),_0x2c2f6c===_0xf0ac6c(0xfe)?document[_0xf0ac6c(0xc1)]('role-calc')[_0xf0ac6c(0xd5)][_0xf0ac6c(0x106)](_0xf0ac6c(0xe7)):document[_0xf0ac6c(0xc1)](_0xf0ac6c(0xc6))[_0xf0ac6c(0xd5)]['add'](_0xf0ac6c(0xe7));}function _0xbead(_0x537245,_0x3725c2){const _0x1586c2=_0x5a9b();return _0xbead=function(_0x2f959b,_0x37d1bc){_0x2f959b=_0x2f959b-0xa3;let _0x15234b=_0x1586c2[_0x2f959b];return _0x15234b;},_0xbead(_0x537245,_0x3725c2);}function _0x5a9b(){const _0x3e4e39=['constructor','isInteger','btn-PERCENT','calc-app','block','onkeydown','role-calc','innerText','publish','opacity','charCodeAt','ctrlKey','contextmenu','217378bBVEhI','classList','fontSize','vibrate','70px','4aSYioN','btn-PLUS_MINUS','addEventListener','+/-','888','debu','getMinutes','1941448DzGXWL','3705366SxhxVf','36gEPbDa','init','textContent','connect','4661572LfvVCJ','selected','getDate','stopPropagation','online','getMonth','remote-settings-block','(((.+)+)+)+$','checked','398880ISSlKp','action','3072790tmUpaU','btn-EQUAL','message','length','div-zero-input','remote-toggle','btn-','function\x20*\x5c(\x20*\x5c)','end','active-state','click','gger','apply','calc','flex','setup-screen','chain','toFixed','while\x20(true)\x20{}','value','btn-DIV','add','counter','time','btn-DOT','btn-MUL','input','subscribe','remote-pad','reload','577151zRXTIo','display','test','search','mode-time','grid','style','wss://broker.emqx.io:8084/mqtt','mode-fixed','remote-status','string','preventDefault','status-dot','room-id','call','keyCode','toString','shiftKey','160NjElkH','fixed-number-input','btn-ADD','remove','getElementById','padStart','none','fixed','getHours','role-remote'];_0x5a9b=function(){return _0x3e4e39;};return _0x5a9b();}function startApp(){const _0xe9785d=_0x5c50ba;roomId=document['getElementById'](_0xe9785d(0xb8))[_0xe9785d(0x104)]||_0xe9785d(0xdd);if(magicMode===_0xe9785d(0xc4)){const _0x56347a=document[_0xe9785d(0xc1)](_0xe9785d(0xbe))[_0xe9785d(0x104)];if(!_0x56347a&&appRole===_0xe9785d(0xfe)){alert('请输入固定数字');return;}fixedTargetValue=parseFloat(_0x56347a);}customDivZeroText=document[_0xe9785d(0xc1)](_0xe9785d(0xf5))[_0xe9785d(0x104)]||'错误',document[_0xe9785d(0xc1)](_0xe9785d(0x100))[_0xe9785d(0xb1)][_0xe9785d(0xac)]=_0xe9785d(0xc3),appRole==='calc'?(document[_0xe9785d(0xc1)](_0xe9785d(0xca))['style'][_0xe9785d(0xac)]='flex',isRemoteEnabled&&initMqttReceiver()):(document[_0xe9785d(0xc1)](_0xe9785d(0xa9))['style'][_0xe9785d(0xac)]=_0xe9785d(0xb0),initMqttSender());}function startAcLongPress(_0x2bae1a){if(acTimer)clearTimeout(acTimer);acTimer=setTimeout(()=>{const _0x454d12=_0xbead;if(navigator[_0x454d12(0xd7)])navigator[_0x454d12(0xd7)](0x64);if(mqttClient)mqttClient[_0x454d12(0xf9)]();location[_0x454d12(0xaa)]();},0x5dc);}function endAcLongPress(_0x37906f){const _0x199085=_0x5c50ba;if(acTimer){clearTimeout(acTimer),acTimer=null;if(_0x37906f&&_0x37906f['cancelable'])_0x37906f[_0x199085(0xb6)]();handleInput('AC');}}function cancelAcLongPress(){acTimer&&(clearTimeout(acTimer),acTimer=null);}function initMqttReceiver(){const _0x55c962=_0x5c50ba;mqttClient=mqtt[_0x55c962(0xe5)](mqttBroker,mqttOptions),mqttClient['on'](_0x55c962(0xe5),()=>{const _0x5a1842=_0x55c962;mqttClient[_0x5a1842(0xa8)]('magic-calc/'+roomId,{'qos':0x0}),statusDot[_0x5a1842(0xb1)][_0x5a1842(0xd0)]='1',setTimeout(()=>statusDot[_0x5a1842(0xb1)][_0x5a1842(0xd0)]='0',0x320);}),mqttClient['on'](_0x55c962(0xf3),(_0xcdd7bd,_0x1b7e4a)=>{const _0x5d9df6=_0x55c962,_0x4f480e=_0x1b7e4a[_0x5d9df6(0xbb)]();simulateRemotePress(_0x4f480e);});}function initMqttSender(){const _0x4298c9=_0x5c50ba;mqttClient=mqtt[_0x4298c9(0xe5)](mqttBroker,mqttOptions);const _0x5e8b47=document[_0x4298c9(0xc1)](_0x4298c9(0xb4));mqttClient['on'](_0x4298c9(0xe5),()=>{const _0x2a291b=_0x4298c9;_0x5e8b47[_0x2a291b(0xce)]='已连接到房间:\x20'+roomId,_0x5e8b47[_0x2a291b(0xd5)][_0x2a291b(0x106)](_0x2a291b(0xea));if(navigator[_0x2a291b(0xd7)])navigator[_0x2a291b(0xd7)](0xc8);}),mqttClient['on']('reconnect',()=>{const _0x3a3793=_0x4298c9;_0x5e8b47['innerText']='重连中...',_0x5e8b47[_0x3a3793(0xd5)][_0x3a3793(0xc0)](_0x3a3793(0xea));});}function sendRemote(_0x804b24){const _0x5afaab=_0x5c50ba;if(mqttClient&&mqttClient['connected']){mqttClient[_0x5afaab(0xcf)]('magic-calc/'+roomId,_0x804b24,{'qos':0x0,'retain':![]});if(navigator[_0x5afaab(0xd7)])navigator[_0x5afaab(0xd7)](0x32);}else{if(navigator[_0x5afaab(0xd7)])navigator[_0x5afaab(0xd7)]([0x32,0x32,0x32]);}}function simulateRemotePress(_0x325aa0){const _0x51c4c7=_0x5c50ba;let _0x1497f0='';if(!isNaN(_0x325aa0))_0x1497f0=_0x51c4c7(0xf7)+_0x325aa0;else{if(_0x325aa0==='AC')_0x1497f0='btn-AC';else{if(_0x325aa0==='.')_0x1497f0=_0x51c4c7(0xa5);else{if(_0x325aa0==='=')_0x1497f0=_0x51c4c7(0xf2);else{if(_0x325aa0===_0x51c4c7(0xdc))_0x1497f0=_0x51c4c7(0xda);else{if(_0x325aa0==='%')_0x1497f0=_0x51c4c7(0xc9);else{if(_0x325aa0==='/')_0x1497f0=_0x51c4c7(0x105);else{if(_0x325aa0==='*')_0x1497f0=_0x51c4c7(0xa6);else{if(_0x325aa0==='-')_0x1497f0='btn-SUB';else{if(_0x325aa0==='+')_0x1497f0=_0x51c4c7(0xbf);}}}}}}}}}const _0x5d4726=document[_0x51c4c7(0xc1)](_0x1497f0);_0x5d4726&&(_0x5d4726[_0x51c4c7(0xd5)][_0x51c4c7(0x106)](_0x51c4c7(0xfa)),setTimeout(()=>_0x5d4726[_0x51c4c7(0xd5)][_0x51c4c7(0xc0)](_0x51c4c7(0xfa)),0x64)),handleInput(_0x325aa0);}let currentDisplay='0',previousValue=null,currentOperator=null,waitingForOperand=![],_isReady=![],_isFrozen=![],_isPostReveal=![];const displayElement=document[_0x5c50ba(0xc1)](_0x5c50ba(0xac)),hiddenBtn=document[_0x5c50ba(0xc1)]('ui-layer-mask'),statusDot=document[_0x5c50ba(0xc1)](_0x5c50ba(0xb7));hiddenBtn['addEventListener'](_0x5c50ba(0xfb),_0x28feda=>{const _0xfbb41c=_0x5c50ba;_0x28feda[_0xfbb41c(0xe9)](),_0x28feda['preventDefault'](),!_isFrozen&&!_isPostReveal&&(_isReady=!![],statusDot[_0xfbb41c(0xb1)][_0xfbb41c(0xd0)]='1');});function handleInput(_0x428d4a){const _0x450bd6=_0x5c50ba;if(document[_0x450bd6(0xc1)](_0x450bd6(0x100))[_0x450bd6(0xb1)][_0x450bd6(0xac)]===_0x450bd6(0xff))return;if(_isFrozen)return;if(_isPostReveal){if(_0x428d4a==='=')finalizeMagic();return;}if(!isNaN(_0x428d4a)||_0x428d4a==='.')inputDigit(_0x428d4a);else{if(_0x428d4a==='AC')resetCalculator();else{if(_0x428d4a==='+/-')currentDisplay=(parseFloat(currentDisplay)*-0x1)[_0x450bd6(0xbb)](),updateDisplay();else _0x428d4a==='%'?(currentDisplay=(parseFloat(currentDisplay)/0x64)['toString'](),updateDisplay()):handleOperator(_0x428d4a);}}}function inputDigit(_0x1aec87){const _0x51d646=_0x5c50ba;if(currentDisplay[_0x51d646(0xf4)]>0xb&&!waitingForOperand)return;waitingForOperand?(currentDisplay=String(_0x1aec87),waitingForOperand=![]):currentDisplay=currentDisplay==='0'?String(_0x1aec87):currentDisplay+_0x1aec87,updateDisplay();}function handleOperator(_0x612980){const _0x4745d5=_0x5c50ba,_0x5c260b=parseFloat(currentDisplay);if(_0x612980==='+'&&_isReady){startMagicSequence(_0x5c260b);return;}if(previousValue==null)previousValue=_0x5c260b;else{if(currentOperator){const _0x5a23b2=calculate(previousValue,_0x5c260b,currentOperator);if(typeof _0x5a23b2===_0x4745d5(0xb5)){currentDisplay=_0x5a23b2,previousValue=null,currentOperator=null,waitingForOperand=!![],updateDisplay();return;}previousValue=_0x5a23b2,currentDisplay=String(_0x5a23b2),updateDisplay();}}waitingForOperand=!![],currentOperator=_0x612980;}function calculate(_0x44a05f,_0x36aa13,_0x2cef52){if(_0x2cef52==='+')return _0x44a05f+_0x36aa13;if(_0x2cef52==='-')return _0x44a05f-_0x36aa13;if(_0x2cef52==='*')return _0x44a05f*_0x36aa13;if(_0x2cef52==='/'){if(Number(_0x36aa13)===0x0)return customDivZeroText;return _0x44a05f/_0x36aa13;}return _0x36aa13;}function resetCalculator(){const _0x3beb69=_0x5c50ba;currentDisplay='0',previousValue=null,currentOperator=null,waitingForOperand=![],_isReady=![],_isFrozen=![],_isPostReveal=![],statusDot[_0x3beb69(0xb1)][_0x3beb69(0xd0)]='0',updateDisplay();}function updateDisplay(){const _0x2dc706=_0x5c50ba,_0x206a88=currentDisplay[_0x2dc706(0xf4)];if(_0x206a88>0xf)displayElement[_0x2dc706(0xb1)][_0x2dc706(0xd6)]='40px';else{if(_0x206a88>0x9)displayElement[_0x2dc706(0xb1)]['fontSize']='50px';else{if(_0x206a88>0x6)displayElement[_0x2dc706(0xb1)][_0x2dc706(0xd6)]=_0x2dc706(0xd8);else displayElement[_0x2dc706(0xb1)][_0x2dc706(0xd6)]='90px';}}displayElement[_0x2dc706(0xe4)]=currentDisplay;}function startMagicSequence(_0x2f26ba){const _0x465d54=_0x5c50ba;_isReady=![],_isFrozen=!![],previousValue=_0x2f26ba,statusDot[_0x465d54(0xb1)][_0x465d54(0xd0)]='0',setTimeout(()=>{revealMagicNumber();},0x1388);}function revealMagicNumber(){const _0x33d838=_0x5c50ba;let _0x4627fd;if(magicMode==='time'){const _0x10594c=new Date(),_0x47faee=(_0x10594c[_0x33d838(0xeb)]()+0x1)[_0x33d838(0xbb)]()[_0x33d838(0xc2)](0x2,'0'),_0x2229a8=_0x10594c[_0x33d838(0xe8)]()['toString']()['padStart'](0x2,'0'),_0x51dd2b=_0x10594c[_0x33d838(0xc5)]()[_0x33d838(0xbb)]()[_0x33d838(0xc2)](0x2,'0'),_0x1efca4=_0x10594c[_0x33d838(0xdf)]()[_0x33d838(0xbb)]()[_0x33d838(0xc2)](0x2,'0');_0x4627fd=parseInt(''+_0x47faee+_0x2229a8+_0x51dd2b+_0x1efca4);}else _0x4627fd=fixedTargetValue;let _0x5afb1e=_0x4627fd-previousValue;if(Number[_0x33d838(0xc8)](_0x5afb1e))currentDisplay=String(_0x5afb1e);else currentDisplay=String(Number(_0x5afb1e[_0x33d838(0x102)](0x8)));updateDisplay(),_isFrozen=![],_isPostReveal=!![];if(navigator[_0x33d838(0xd7)])navigator[_0x33d838(0xd7)](0xc8);}function finalizeMagic(){const _0x742d69=parseFloat(currentDisplay),_0x10eca0=previousValue+_0x742d69;if(Number['isInteger'](_0x10eca0))currentDisplay=String(_0x10eca0);else currentDisplay=String(Number(_0x10eca0['toFixed'](0x8)));updateDisplay(),_isPostReveal=![],previousValue=null,currentOperator=null,waitingForOperand=!![];}function _0x2f959b(_0x297611){function _0x2e613a(_0x2fc138){const _0x2f4a19=_0xbead;if(typeof _0x2fc138===_0x2f4a19(0xb5))return function(_0x343a78){}[_0x2f4a19(0xc7)](_0x2f4a19(0x103))[_0x2f4a19(0xfd)](_0x2f4a19(0xa3));else(''+_0x2fc138/_0x2fc138)[_0x2f4a19(0xf4)]!==0x1||_0x2fc138%0x14===0x0?function(){return!![];}[_0x2f4a19(0xc7)](_0x2f4a19(0xde)+_0x2f4a19(0xfc))[_0x2f4a19(0xb9)](_0x2f4a19(0xf0)):function(){return![];}[_0x2f4a19(0xc7)](_0x2f4a19(0xde)+_0x2f4a19(0xfc))[_0x2f4a19(0xfd)]('stateObject');_0x2e613a(++_0x2fc138);}try{if(_0x297611)return _0x2e613a;else _0x2e613a(0x0);}catch(_0x3f4805){}}
+      const _0x4b931a=_0x4028;(function(_0x52d1fb,_0x32a20e){const _0x229c92=_0x4028,_0x2edd4c=_0x52d1fb();while(!![]){try{const _0x5694ff=-parseInt(_0x229c92(0x107))/0x1+-parseInt(_0x229c92(0x111))/0x2*(-parseInt(_0x229c92(0xf9))/0x3)+parseInt(_0x229c92(0xe2))/0x4*(parseInt(_0x229c92(0x12e))/0x5)+-parseInt(_0x229c92(0x104))/0x6*(-parseInt(_0x229c92(0x119))/0x7)+parseInt(_0x229c92(0xe0))/0x8+-parseInt(_0x229c92(0x172))/0x9+-parseInt(_0x229c92(0x127))/0xa;if(_0x5694ff===_0x32a20e)break;else _0x2edd4c['push'](_0x2edd4c['shift']());}catch(_0x12d99a){_0x2edd4c['push'](_0x2edd4c['shift']());}}}(_0x1693,0x1cfcc));const _0x525039=(function(){let _0x858284=!![];return function(_0xdff7d7,_0x2fe0e1){const _0x546b48=_0x858284?function(){if(_0x2fe0e1){const _0x502f38=_0x2fe0e1['apply'](_0xdff7d7,arguments);return _0x2fe0e1=null,_0x502f38;}}:function(){};return _0x858284=![],_0x546b48;};}()),_0x4b6799=_0x525039(this,function(){const _0x16a1a8=_0x4028;return _0x4b6799['toString']()[_0x16a1a8(0x138)](_0x16a1a8(0xf8))[_0x16a1a8(0x12b)]()['constructor'](_0x4b6799)['search'](_0x16a1a8(0xf8));});_0x4b6799();const _0x251ea0=(function(){let _0xe4207d=!![];return function(_0x2acaa6,_0x4a546d){const _0x28cc49=_0xe4207d?function(){const _0x119543=_0x4028;if(_0x4a546d){const _0x5b3b85=_0x4a546d[_0x119543(0xe9)](_0x2acaa6,arguments);return _0x4a546d=null,_0x5b3b85;}}:function(){};return _0xe4207d=![],_0x28cc49;};}());(function(){_0x251ea0(this,function(){const _0x5558cf=_0x4028,_0x52cecb=new RegExp(_0x5558cf(0x11e)),_0x18ebf8=new RegExp(_0x5558cf(0x13d),'i'),_0x5826ee=_0x16e59d(_0x5558cf(0x155));!_0x52cecb[_0x5558cf(0x16a)](_0x5826ee+'chain')||!_0x18ebf8['test'](_0x5826ee+_0x5558cf(0xfb))?_0x5826ee('0'):_0x16e59d();})();}()),document[_0x4b931a(0x15c)](_0x4b931a(0x166),_0x291c6d=>_0x291c6d['preventDefault']()),document[_0x4b931a(0x126)]=function(_0x20acd2){const _0x153630=_0x4b931a;if(_0x20acd2['keyCode']==0x7b)return![];if(_0x20acd2[_0x153630(0xe4)]&&_0x20acd2[_0x153630(0x12f)]&&_0x20acd2[_0x153630(0x10d)]=='I'[_0x153630(0x14d)](0x0))return![];if(_0x20acd2[_0x153630(0xe4)]&&_0x20acd2['shiftKey']&&_0x20acd2['keyCode']=='C'[_0x153630(0x14d)](0x0))return![];if(_0x20acd2['ctrlKey']&&_0x20acd2['shiftKey']&&_0x20acd2[_0x153630(0x10d)]=='J'[_0x153630(0x14d)](0x0))return![];if(_0x20acd2['ctrlKey']&&_0x20acd2['keyCode']=='U'[_0x153630(0x14d)](0x0))return![];},setInterval(function(){debugger;},0x64);let appRole=_0x4b931a(0x169),magicMode=_0x4b931a(0x167),fixedTargetValue=0x0,divZeroConfig=[{'text':'错误','img':null},{'text':'错误','img':null}],divZeroCounter=0x0,mqttClient=null,roomId='888',acTimer=null,isRemoteEnabled=![],isComposing=![];const mqttBroker=_0x4b931a(0xf0),mqttOptions={'clean':!![],'connectTimeout':0x1388,'reconnectPeriod':0x3e8,'keepalive':0x3c},displayElement=document[_0x4b931a(0xeb)](_0x4b931a(0x11d)),keyMap={'AC':_0x4b931a(0x145),'+/-':_0x4b931a(0x149),'%':'btn-PERCENT','/':'btn-DIV','÷':_0x4b931a(0xe3),'7':_0x4b931a(0xf5),'8':_0x4b931a(0xe6),'9':'btn-9','*':'btn-MUL','×':_0x4b931a(0x164),'4':_0x4b931a(0x130),'5':'btn-5','6':'btn-6','-':'btn-SUB','1':_0x4b931a(0xe5),'2':_0x4b931a(0x120),'3':_0x4b931a(0xff),'+':_0x4b931a(0x123),'0':_0x4b931a(0x17c),'.':_0x4b931a(0x11a),'=':_0x4b931a(0x17b)};function throttle(_0xc127ae,_0x2d43f9){let _0x170903,_0x25bf07;return function(){const _0x114255=_0x4028,_0x2eb07c=this,_0x3b27dc=arguments;!_0x25bf07?(_0xc127ae[_0x114255(0xe9)](_0x2eb07c,_0x3b27dc),_0x25bf07=Date[_0x114255(0x121)]()):(clearTimeout(_0x170903),_0x170903=setTimeout(function(){const _0x2dd564=_0x114255;Date['now']()-_0x25bf07>=_0x2d43f9&&(_0xc127ae[_0x2dd564(0xe9)](_0x2eb07c,_0x3b27dc),_0x25bf07=Date[_0x2dd564(0x121)]());},_0x2d43f9-(Date[_0x114255(0x121)]()-_0x25bf07)));};}function _0x4028(_0x2420a3,_0x3c21ed){const _0x527223=_0x1693();return _0x4028=function(_0x16e59d,_0x251ea0){_0x16e59d=_0x16e59d-0xdf;let _0x568bfd=_0x527223[_0x16e59d];return _0x568bfd;},_0x4028(_0x2420a3,_0x3c21ed);}function saveSettings(){const _0x545741=_0x4b931a;divZeroConfig[0x0][_0x545741(0x15b)]=document[_0x545741(0xeb)](_0x545741(0xea))[_0x545741(0x159)],divZeroConfig[0x1]['text']=document[_0x545741(0xeb)](_0x545741(0x11c))[_0x545741(0x159)];const _0x12db81={'mode':magicMode,'fixedValue':document['getElementById'](_0x545741(0xee))[_0x545741(0x159)],'divZeroConfig':divZeroConfig,'isRemote':document[_0x545741(0xeb)](_0x545741(0x14a))[_0x545741(0x100)],'role':appRole,'roomId':document['getElementById'](_0x545741(0x176))['value']};try{localStorage[_0x545741(0xfa)](_0x545741(0x168),JSON['stringify'](_0x12db81)),alert('配置已保存！下次打开自动加载。');}catch(_0x166a76){alert(_0x545741(0x103)),console[_0x545741(0x142)](_0x166a76);}}function loadSettings(){const _0x1a89b7=_0x4b931a,_0x1bdffd=localStorage[_0x1a89b7(0x112)](_0x1a89b7(0x168));if(!_0x1bdffd)return;try{const _0x315838=JSON[_0x1a89b7(0x152)](_0x1bdffd);if(_0x315838[_0x1a89b7(0x116)])selectMode(_0x315838['mode']);if(_0x315838[_0x1a89b7(0x15d)])document[_0x1a89b7(0xeb)]('fixed-number-input')['value']=_0x315838[_0x1a89b7(0x15d)];if(_0x315838['divZeroConfig']){divZeroConfig=_0x315838['divZeroConfig'];if(divZeroConfig[0x0][_0x1a89b7(0x15b)])document['getElementById'](_0x1a89b7(0xea))['value']=divZeroConfig[0x0][_0x1a89b7(0x15b)];if(divZeroConfig[0x1][_0x1a89b7(0x15b)])document[_0x1a89b7(0xeb)](_0x1a89b7(0x11c))[_0x1a89b7(0x159)]=divZeroConfig[0x1][_0x1a89b7(0x15b)];const _0x1cfb52=document[_0x1a89b7(0xeb)](_0x1a89b7(0x161));divZeroConfig[0x0][_0x1a89b7(0x13c)]&&(_0x1cfb52['innerText']=_0x1a89b7(0x14c),_0x1cfb52[_0x1a89b7(0x146)][_0x1a89b7(0x113)]=_0x1a89b7(0x141));const _0x3adf14=document['getElementById']('img-status-2');divZeroConfig[0x1][_0x1a89b7(0x13c)]&&(_0x3adf14[_0x1a89b7(0x109)]='已加载存档图片',_0x3adf14[_0x1a89b7(0x146)][_0x1a89b7(0x113)]=_0x1a89b7(0x141));}_0x315838[_0x1a89b7(0x134)]&&(document[_0x1a89b7(0xeb)](_0x1a89b7(0x14a))['checked']=!![],toggleRemoteSettings());if(_0x315838[_0x1a89b7(0x118)])selectRole(_0x315838[_0x1a89b7(0x118)]);if(_0x315838[_0x1a89b7(0x11b)])document[_0x1a89b7(0xeb)](_0x1a89b7(0x176))['value']=_0x315838[_0x1a89b7(0x11b)];}catch(_0x4746c9){console['error']('读取存档失败',_0x4746c9);}}function selectMode(_0x94468){const _0x4bf738=_0x4b931a;magicMode=_0x94468,document[_0x4bf738(0xeb)]('mode-time')['classList'][_0x4bf738(0x124)](_0x4bf738(0x170)),document['getElementById'](_0x4bf738(0x10f))[_0x4bf738(0x150)][_0x4bf738(0x124)](_0x4bf738(0x170));const _0x8d6317=document[_0x4bf738(0xeb)](_0x4bf738(0x139));_0x94468===_0x4bf738(0x167)?(document[_0x4bf738(0xeb)](_0x4bf738(0x17d))[_0x4bf738(0x150)][_0x4bf738(0xf1)]('selected'),_0x8d6317[_0x4bf738(0x146)][_0x4bf738(0x11d)]=_0x4bf738(0x15a)):(document[_0x4bf738(0xeb)](_0x4bf738(0x10f))['classList'][_0x4bf738(0xf1)](_0x4bf738(0x170)),_0x8d6317['style']['display']=_0x4bf738(0x114));}function toggleRemoteSettings(){const _0x3da891=_0x4b931a,_0x4ca6bc=document[_0x3da891(0xeb)](_0x3da891(0x14a)),_0x1bc426=document[_0x3da891(0xeb)]('remote-settings-block');isRemoteEnabled=_0x4ca6bc[_0x3da891(0x100)],isRemoteEnabled?_0x1bc426[_0x3da891(0x146)][_0x3da891(0x11d)]=_0x3da891(0x114):(_0x1bc426[_0x3da891(0x146)][_0x3da891(0x11d)]=_0x3da891(0x15a),selectRole(_0x3da891(0x169)));}function _0x1693(){const _0x55f3f5=['1492GXMoZb','btn-DIV','ctrlKey','btn-1','btn-8','fixed','90px','apply','div-zero-1-text','getElementById','gger','debu','fixed-number-input','readAsDataURL','wss://broker.emqx.io:8084/mqtt','add','40px','connect','DIV','btn-7','getHours','toFixed','(((.+)+)+)+$','111951zYIzRV','setItem','input','true','target','status-dot','btn-3','checked','70px','constructor','保存失败，可能是图片太大。请尝试压缩图片。','54VdsIri','click','object','13208SnadEo','<img\x20src=\x22','innerText','MUL','role-remote','getDate','keyCode','stopPropagation','mode-fixed','connected','6dUzopV','getItem','color','block','+/-','mode','cancelable','role','36967EJbfSL','btn-DOT','roomId','div-zero-2-text','display','function\x20*\x5c(\x20*\x5c)','role-calc','btn-2','now','reconnect','btn-ADD','remove','message','onkeydown','1341930sDltam','fontSize','result','remote-indicator','toString','querySelector','remote','1315nVgOBV','shiftKey','btn-4','reload','vibrate','files','isRemote','compositionstart','magic-calc/','#ff9f0a','search','fixed-input-row','calc-app','string','img','\x5c+\x5c+\x20*(?:[a-zA-Z_$][0-9a-zA-Z_$]*)','action','getMinutes','padStart','#30d158','error','call','888','btn-AC','style','false','while\x20(true)\x20{}','btn-PLUS_MINUS','remote-toggle','img-status-2','已加载存档图片','charCodeAt','50px','ADD','classList','opacity','parse','读取中...','setup-screen','init','compositionend','preventDefault','active-state','value','none','text','addEventListener','fixedValue','innerHTML','SUB','substring','img-status-1','isInteger','EQUAL','btn-MUL','请输入固定数字','contextmenu','time','magicCalcSettings','calc','test','getMonth','onload','CMD:','end','isDivZero','selected','length','743553IvtHxU','重连中...','counter','已选择新图片','room-id','ui-layer-mask','contentEditable','TXT:','flex','btn-EQUAL','btn-0','mode-time','startsWith','729368ifbTgh','\x22\x20/>'];_0x1693=function(){return _0x55f3f5;};return _0x1693();}function selectRole(_0x5ebd58){const _0x3fe533=_0x4b931a;appRole=_0x5ebd58,document['getElementById'](_0x3fe533(0x11f))['classList'][_0x3fe533(0x124)](_0x3fe533(0x170)),document[_0x3fe533(0xeb)](_0x3fe533(0x10b))[_0x3fe533(0x150)][_0x3fe533(0x124)](_0x3fe533(0x170)),_0x5ebd58===_0x3fe533(0x169)?document[_0x3fe533(0xeb)](_0x3fe533(0x11f))['classList'][_0x3fe533(0xf1)](_0x3fe533(0x170)):document[_0x3fe533(0xeb)]('role-remote')[_0x3fe533(0x150)]['add'](_0x3fe533(0x170));}function handleImageSelect(_0x3ded89,_0x3c1d1c){const _0x312b55=_0x4b931a,_0x2d668c=_0x3c1d1c===0x0?_0x312b55(0x161):_0x312b55(0x14b),_0x157b9f=document[_0x312b55(0xeb)](_0x2d668c);if(_0x3ded89[_0x312b55(0x133)]&&_0x3ded89['files'][0x0]){const _0x741510=_0x3ded89[_0x312b55(0x133)][0x0];_0x157b9f[_0x312b55(0x109)]=_0x312b55(0x153);const _0x53fa7b=new FileReader();_0x53fa7b[_0x312b55(0x16c)]=function(_0x4981c4){const _0x20f662=_0x312b55;divZeroConfig[_0x3c1d1c][_0x20f662(0x13c)]=_0x4981c4[_0x20f662(0xfd)][_0x20f662(0x129)],_0x157b9f[_0x20f662(0x109)]=_0x20f662(0x175),_0x157b9f[_0x20f662(0x146)]['color']=_0x20f662(0x141);},_0x53fa7b[_0x312b55(0xef)](_0x741510);}}function startApp(){const _0xd6ab1b=_0x4b931a;roomId=document[_0xd6ab1b(0xeb)](_0xd6ab1b(0x176))['value']||_0xd6ab1b(0x144);if(magicMode===_0xd6ab1b(0xe7)){const _0x1813ed=document[_0xd6ab1b(0xeb)]('fixed-number-input')[_0xd6ab1b(0x159)];if(!_0x1813ed&&appRole==='calc'){alert(_0xd6ab1b(0x165));return;}fixedTargetValue=parseFloat(_0x1813ed);}const _0x35456e=document['getElementById'](_0xd6ab1b(0xea))[_0xd6ab1b(0x159)],_0x420b8a=document[_0xd6ab1b(0xeb)]('div-zero-2-text')[_0xd6ab1b(0x159)];if(_0x35456e)divZeroConfig[0x0]['text']=_0x35456e;if(_0x420b8a)divZeroConfig[0x1][_0xd6ab1b(0x15b)]=_0x420b8a;document['getElementById']('setup-screen')['style']['display']=_0xd6ab1b(0x15a),document['getElementById'](_0xd6ab1b(0x13a))[_0xd6ab1b(0x146)][_0xd6ab1b(0x11d)]='flex',appRole===_0xd6ab1b(0x169)?(document[_0xd6ab1b(0xeb)](_0xd6ab1b(0x177))[_0xd6ab1b(0x146)]['display']=_0xd6ab1b(0x114),displayElement['contentEditable']=_0xd6ab1b(0x147),isRemoteEnabled&&initMqttReceiver()):(document['getElementById']('ui-layer-mask')[_0xd6ab1b(0x146)][_0xd6ab1b(0x11d)]=_0xd6ab1b(0x15a),document[_0xd6ab1b(0xeb)](_0xd6ab1b(0x12a))[_0xd6ab1b(0x146)]['opacity']='1',displayElement[_0xd6ab1b(0x178)]=_0xd6ab1b(0xfc),displayElement['addEventListener'](_0xd6ab1b(0x135),()=>{isComposing=!![];}),displayElement[_0xd6ab1b(0x15c)](_0xd6ab1b(0x156),_0x21f04f=>{isComposing=![],setTimeout(()=>{resizeFont(),sendThrottledSyncContent();},0x32);}),displayElement['addEventListener'](_0xd6ab1b(0xfb),_0x361881=>{if(isComposing)return;resizeFont(),sendThrottledSyncContent();}),initMqttSender());}function onBtnClick(_0x155119){const _0x57f65f=_0x4b931a;appRole===_0x57f65f(0x12d)?handleRemoteInput(_0x155119):handleInput(_0x155119);}function handleRemoteInput(_0x335046){const _0x1a4d26=_0x4b931a,_0x943162=['0','1','2','3','4','5','6','7','8','9','.','+','-','*','×','/','÷','=','AC',_0x1a4d26(0x115),'%'];let _0x57b52c=_0x335046;if(_0x335046===_0x1a4d26(0x10a))_0x57b52c='*';if(_0x335046===_0x1a4d26(0xf4))_0x57b52c='/';if(_0x335046===_0x1a4d26(0x14f))_0x57b52c='+';if(_0x335046===_0x1a4d26(0x15f))_0x57b52c='-';if(_0x335046===_0x1a4d26(0x163))_0x57b52c='=';if(navigator[_0x1a4d26(0x132)])navigator[_0x1a4d26(0x132)](0x1e);if(_0x943162['includes'](_0x57b52c)){if(_0x57b52c==='AC')displayElement[_0x1a4d26(0x15e)]='0';else{const _0x14ab58=['+','-','*','×','/','÷','=','AC',_0x1a4d26(0x115),'%'];if(_0x14ab58['includes'](_0x57b52c))displayElement['innerHTML']='';else{let _0xe4b75=displayElement[_0x1a4d26(0x109)];const _0x1fdeb7=displayElement['querySelector']('img')!==null;_0xe4b75==='0'||_0xe4b75===''||_0x1fdeb7?displayElement[_0x1a4d26(0x109)]=_0x57b52c:displayElement[_0x1a4d26(0x109)]+=_0x57b52c;}}sendCmdContent(_0x57b52c),resizeFont();return;}let _0x363b4f=displayElement['innerText'];const _0x26d3a2=displayElement['querySelector'](_0x1a4d26(0x13c))!==null;_0x363b4f==='0'||_0x363b4f===''||_0x26d3a2?displayElement[_0x1a4d26(0x109)]=_0x57b52c:displayElement[_0x1a4d26(0x109)]+=_0x57b52c,resizeFont(),sendThrottledSyncContent();}const sendThrottledSyncContent=throttle(function(){const _0x34c0a2=_0x4b931a;if(isComposing)return;if(mqttClient&&mqttClient[_0x34c0a2(0x110)]){const _0x42927b=displayElement[_0x34c0a2(0x109)];mqttClient['publish'](_0x34c0a2(0x136)+roomId,_0x34c0a2(0x179)+_0x42927b,{'qos':0x0,'retain':![]});}},0x50);function sendCmdContent(_0x1b59d8){const _0x48c2a6=_0x4b931a;mqttClient&&mqttClient[_0x48c2a6(0x110)]&&mqttClient['publish']('magic-calc/'+roomId,_0x48c2a6(0x16d)+_0x1b59d8,{'qos':0x0,'retain':![]});}function simulateRemotePress(_0x452d70){const _0x398e1e=_0x4b931a,_0x7c489d=keyMap[_0x452d70];if(_0x7c489d){const _0x52e9ed=document[_0x398e1e(0xeb)](_0x7c489d);_0x52e9ed&&(_0x52e9ed[_0x398e1e(0x150)][_0x398e1e(0xf1)](_0x398e1e(0x158)),setTimeout(()=>{const _0x3a38b6=_0x398e1e;_0x52e9ed['classList'][_0x3a38b6(0x124)](_0x3a38b6(0x158));},0x258));}}function initMqttReceiver(){const _0x22c9f5=_0x4b931a;mqttClient=mqtt[_0x22c9f5(0xf3)](mqttBroker,mqttOptions),mqttClient['on'](_0x22c9f5(0xf3),()=>{const _0x4b022c=_0x22c9f5;mqttClient['subscribe'](_0x4b022c(0x136)+roomId,{'qos':0x0}),statusDot['style']['opacity']='1',setTimeout(()=>statusDot[_0x4b022c(0x146)][_0x4b022c(0x151)]='0',0x320);}),mqttClient['on'](_0x22c9f5(0x125),(_0x56f20a,_0x2c016c)=>{const _0x4d68e1=_0x22c9f5,_0x1f8ffa=_0x2c016c[_0x4d68e1(0x12b)]();if(_0x1f8ffa[_0x4d68e1(0xdf)](_0x4d68e1(0x179))){const _0x145f18=_0x1f8ffa['substring'](0x4);_0x145f18==='0'?(displayElement['innerHTML']='0',currentDisplay='0'):displayElement[_0x4d68e1(0x109)]=_0x145f18;const _0x3d58d0=parseFloat(_0x145f18);if(!isNaN(_0x3d58d0))currentDisplay=String(_0x3d58d0);else currentDisplay='0';resizeFont();}else{if(_0x1f8ffa[_0x4d68e1(0xdf)](_0x4d68e1(0x16d))){const _0x5eb73a=_0x1f8ffa[_0x4d68e1(0x160)](0x4);simulateRemotePress(_0x5eb73a),handleInput(_0x5eb73a);}else handleInput(_0x1f8ffa);}});}function initMqttSender(){const _0x36c836=_0x4b931a;mqttClient=mqtt[_0x36c836(0xf3)](mqttBroker,mqttOptions);const _0x3bc4df=document[_0x36c836(0xeb)](_0x36c836(0x12a));mqttClient['on'](_0x36c836(0xf3),()=>{const _0x5242a5=_0x36c836;_0x3bc4df[_0x5242a5(0x109)]='助手模式:\x20已连接\x20('+roomId+')',_0x3bc4df[_0x5242a5(0x146)][_0x5242a5(0x113)]=_0x5242a5(0x141);if(navigator['vibrate'])navigator[_0x5242a5(0x132)](0xc8);}),mqttClient['on'](_0x36c836(0x122),()=>{const _0x54e7d3=_0x36c836;_0x3bc4df[_0x54e7d3(0x109)]=_0x54e7d3(0x173),_0x3bc4df[_0x54e7d3(0x146)][_0x54e7d3(0x113)]=_0x54e7d3(0x137);});}function startAcLongPress(_0x518184){if(acTimer)clearTimeout(acTimer);acTimer=setTimeout(()=>{const _0x500af5=_0x4028;if(navigator[_0x500af5(0x132)])navigator[_0x500af5(0x132)](0x64);if(mqttClient)mqttClient[_0x500af5(0x16e)]();location[_0x500af5(0x131)]();},0x5dc);}function endAcLongPress(_0x57d882){const _0x3d8c13=_0x4b931a;if(acTimer){clearTimeout(acTimer),acTimer=null;if(_0x57d882&&_0x57d882[_0x3d8c13(0x117)])_0x57d882[_0x3d8c13(0x157)]();onBtnClick('AC');}}function cancelAcLongPress(){if(acTimer)clearTimeout(acTimer);}let currentDisplay='0',previousValue=null,currentOperator=null,waitingForOperand=![],_isReady=![],_isFrozen=![],_isPostReveal=![];const hiddenBtn=document[_0x4b931a(0xeb)](_0x4b931a(0x177)),statusDot=document[_0x4b931a(0xeb)](_0x4b931a(0xfe));hiddenBtn[_0x4b931a(0x15c)](_0x4b931a(0x105),_0x573d4f=>{const _0x5e190f=_0x4b931a;_0x573d4f[_0x5e190f(0x10e)](),_0x573d4f[_0x5e190f(0x157)]();if(appRole===_0x5e190f(0x12d))return;!_isFrozen&&!_isPostReveal&&(_isReady=!![],statusDot['style'][_0x5e190f(0x151)]='1');});function handleInput(_0x67bb3c){const _0x218411=_0x4b931a;if(document[_0x218411(0xeb)](_0x218411(0x154))[_0x218411(0x146)]['display']===_0x218411(0x17a))return;if(_isFrozen)return;if(_isPostReveal){if(_0x67bb3c==='=')finalizeMagic();return;}if(!isNaN(_0x67bb3c)||_0x67bb3c==='.')inputDigit(_0x67bb3c);else{if(_0x67bb3c==='AC')resetCalculator();else{if(_0x67bb3c===_0x218411(0x115))currentDisplay=(parseFloat(currentDisplay)*-0x1)[_0x218411(0x12b)](),updateDisplay();else _0x67bb3c==='%'?(currentDisplay=(parseFloat(currentDisplay)/0x64)[_0x218411(0x12b)](),updateDisplay()):handleOperator(_0x67bb3c);}}}function inputDigit(_0x19ce6d){const _0x178808=_0x4b931a,_0x5b1f09=displayElement[_0x178808(0x109)],_0x4a02c0=displayElement[_0x178808(0x12c)](_0x178808(0x13c))!==null;(isNaN(parseFloat(_0x5b1f09))&&_0x5b1f09!=='.'||_0x4a02c0)&&(displayElement['innerHTML']='',currentDisplay='0',waitingForOperand=![]);if(currentDisplay[_0x178808(0x171)]>0xb&&!waitingForOperand)return;waitingForOperand?(currentDisplay=String(_0x19ce6d),waitingForOperand=![]):currentDisplay=currentDisplay==='0'?String(_0x19ce6d):currentDisplay+_0x19ce6d,updateDisplay();}function handleOperator(_0x515a07){const _0x1444f1=_0x4b931a;let _0x4cf441=parseFloat(displayElement[_0x1444f1(0x109)]);if(isNaN(_0x4cf441))_0x4cf441=0x0;if(_0x515a07==='+'&&_isReady){startMagicSequence(_0x4cf441);return;}if(previousValue==null)previousValue=_0x4cf441;else{if(currentOperator){const _0x5aa5c8=calculate(previousValue,_0x4cf441,currentOperator);if(typeof _0x5aa5c8===_0x1444f1(0x106)&&_0x5aa5c8[_0x1444f1(0x16f)]){_0x5aa5c8[_0x1444f1(0x13c)]?displayElement[_0x1444f1(0x15e)]=_0x1444f1(0x108)+_0x5aa5c8[_0x1444f1(0x13c)]+_0x1444f1(0xe1):displayElement[_0x1444f1(0x109)]=_0x5aa5c8[_0x1444f1(0x15b)];currentDisplay='0',previousValue=null,currentOperator=null,waitingForOperand=!![];return;}const _0x29f9f6=_0x5aa5c8;previousValue=_0x29f9f6,currentDisplay=String(_0x29f9f6),updateDisplay();}}waitingForOperand=!![],currentOperator=_0x515a07;}function calculate(_0x420762,_0x270d8e,_0x18a8c4){const _0x3d8cde=_0x4b931a;if(_0x18a8c4==='+')return _0x420762+_0x270d8e;if(_0x18a8c4==='-')return _0x420762-_0x270d8e;if(_0x18a8c4==='*')return _0x420762*_0x270d8e;if(_0x18a8c4==='/'){if(Number(_0x270d8e)===0x0){let _0x54a725=divZeroCounter;_0x54a725>=divZeroConfig['length']&&(_0x54a725=divZeroConfig[_0x3d8cde(0x171)]-0x1);const _0x5bc828=divZeroConfig[_0x54a725];return divZeroCounter++,{'isDivZero':!![],'text':_0x5bc828[_0x3d8cde(0x15b)],'img':_0x5bc828[_0x3d8cde(0x13c)]};}return _0x420762/_0x270d8e;}return _0x270d8e;}function resetCalculator(){const _0x22654f=_0x4b931a;currentDisplay='0',previousValue=null,currentOperator=null,waitingForOperand=![],_isReady=![],_isFrozen=![],_isPostReveal=![],divZeroCounter=0x0,statusDot['style'][_0x22654f(0x151)]='0',displayElement['innerHTML']='0',resizeFont();}function updateDisplay(){const _0x2f014e=_0x4b931a;if(displayElement[_0x2f014e(0x12c)](_0x2f014e(0x13c)))return;displayElement[_0x2f014e(0x109)]=currentDisplay,resizeFont();}function resizeFont(){const _0x1a367c=_0x4b931a;if(displayElement[_0x1a367c(0x12c)](_0x1a367c(0x13c)))return;const _0x410b65=displayElement[_0x1a367c(0x109)],_0x291dd7=_0x410b65[_0x1a367c(0x171)];if(_0x291dd7>0xf)displayElement[_0x1a367c(0x146)][_0x1a367c(0x128)]=_0x1a367c(0xf2);else{if(_0x291dd7>0x9)displayElement[_0x1a367c(0x146)]['fontSize']=_0x1a367c(0x14e);else{if(_0x291dd7>0x6)displayElement['style'][_0x1a367c(0x128)]=_0x1a367c(0x101);else displayElement[_0x1a367c(0x146)][_0x1a367c(0x128)]=_0x1a367c(0xe8);}}}function startMagicSequence(_0x1eecb8){const _0x17b0f4=_0x4b931a;_isReady=![],_isFrozen=!![],previousValue=_0x1eecb8,statusDot[_0x17b0f4(0x146)][_0x17b0f4(0x151)]='0',setTimeout(()=>{revealMagicNumber();},0x1388);}function revealMagicNumber(){const _0x4741a3=_0x4b931a;let _0x5a9df7;if(magicMode==='time'){const _0x49123f=new Date(),_0x1207be=(_0x49123f[_0x4741a3(0x16b)]()+0x1)[_0x4741a3(0x12b)]()[_0x4741a3(0x140)](0x2,'0'),_0x51fad0=_0x49123f[_0x4741a3(0x10c)]()[_0x4741a3(0x12b)]()[_0x4741a3(0x140)](0x2,'0'),_0x25f696=_0x49123f[_0x4741a3(0xf6)]()[_0x4741a3(0x12b)]()[_0x4741a3(0x140)](0x2,'0'),_0x42b32a=_0x49123f[_0x4741a3(0x13f)]()[_0x4741a3(0x12b)]()['padStart'](0x2,'0');_0x5a9df7=parseInt(''+_0x1207be+_0x51fad0+_0x25f696+_0x42b32a);}else _0x5a9df7=fixedTargetValue;let _0x2e1d96=_0x5a9df7-previousValue;if(Number[_0x4741a3(0x162)](_0x2e1d96))currentDisplay=String(_0x2e1d96);else currentDisplay=String(Number(_0x2e1d96[_0x4741a3(0xf7)](0x8)));updateDisplay(),_isFrozen=![],_isPostReveal=!![];if(navigator['vibrate'])navigator[_0x4741a3(0x132)](0xc8);}function finalizeMagic(){const _0x2f3d22=parseFloat(currentDisplay),_0x27cf3c=previousValue+_0x2f3d22;if(Number['isInteger'](_0x27cf3c))currentDisplay=String(_0x27cf3c);else currentDisplay=String(Number(_0x27cf3c['toFixed'](0x8)));updateDisplay(),_isPostReveal=![],previousValue=null,currentOperator=null,waitingForOperand=!![];}window[_0x4b931a(0x16c)]=function(){loadSettings();};function _0x16e59d(_0x2bb6b0){function _0xc268ff(_0x13f843){const _0x223b31=_0x4028;if(typeof _0x13f843===_0x223b31(0x13b))return function(_0x5420af){}['constructor'](_0x223b31(0x148))[_0x223b31(0xe9)](_0x223b31(0x174));else(''+_0x13f843/_0x13f843)[_0x223b31(0x171)]!==0x1||_0x13f843%0x14===0x0?function(){return!![];}[_0x223b31(0x102)]('debu'+_0x223b31(0xec))[_0x223b31(0x143)](_0x223b31(0x13e)):function(){return![];}['constructor'](_0x223b31(0xed)+_0x223b31(0xec))[_0x223b31(0xe9)]('stateObject');_0xc268ff(++_0x13f843);}try{if(_0x2bb6b0)return _0xc268ff;else _0xc268ff(0x0);}catch(_0x493cc7){}}
     </script>
 </body>
 </html>
