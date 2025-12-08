@@ -13,7 +13,7 @@
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
-            touch-action: manipulation; /* 允许滚动和缩放手势，但禁止双击缩放 */
+            touch-action: manipulation;
         }
 
         body {
@@ -23,7 +23,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             height: 100vh;
             width: 100vw;
-            overflow: hidden; /* 只有计算器界面禁止滚动 */
+            overflow: hidden;
             padding-bottom: env(safe-area-inset-bottom);
             box-sizing: border-box;
         }
@@ -33,15 +33,13 @@
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: #000000; z-index: 2000; display: flex; flex-direction: column;
             align-items: center; color: white;
-            
-            /* --- 滚动优化关键部分 --- */
             padding-top: calc(env(safe-area-inset-top) + 60px);
             padding-left: 16px; padding-right: 16px; 
-            padding-bottom: 120px; /* 增加底部留白，防止按钮无法滑到底 */
+            padding-bottom: 120px; 
             box-sizing: border-box; 
-            overflow-y: auto; /* 允许纵向滚动 */
-            -webkit-overflow-scrolling: touch; /* 开启iOS惯性滚动 */
-            overscroll-behavior: contain; /* 防止滚动溢出影响底层 */
+            overflow-y: auto; 
+            -webkit-overflow-scrolling: touch; 
+            overscroll-behavior: contain;
         }
 
         .setup-header { width: 100%; max-width: 350px; margin-bottom: 30px; padding-left: 10px; flex-shrink: 0; }
@@ -86,9 +84,29 @@
         .file-row:last-child { border-bottom: none; }
 
         .file-label { color: #0a84ff; font-size: 17px; }
-        .file-status { font-size: 14px; color: #636366; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        /* 图片状态区域样式优化 */
+        .file-status-container { display: flex; align-items: center; gap: 8px; z-index: 20; position: relative; }
+        .file-status { font-size: 14px; color: #636366; max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        /* 清除图片按钮 */
+        .clear-img-btn {
+            background: rgba(60, 60, 60, 0.8);
+            color: #ff453a;
+            border: none;
+            border-radius: 50%;
+            width: 22px; height: 22px;
+            display: none; /* 默认隐藏 */
+            align-items: center; justify-content: center;
+            font-size: 16px; font-weight: bold;
+            cursor: pointer;
+            padding: 0; line-height: 1;
+        }
+        .clear-img-btn:active { background: rgba(80, 80, 80, 1); }
+
         input[type="file"] {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;
+            z-index: 10; /* 必须低于清除按钮的 z-index */
         }
 
         .switch { position: relative; display: inline-block; width: 51px; height: 31px; }
@@ -165,7 +183,6 @@
             aspect-ratio: 1; width: 100%; border-radius: 50%; border: none; 
             font-size: 34px; font-weight: 400; cursor: pointer; 
             display: flex; justify-content: center; align-items: center; 
-            /* 正常状态下有一个 fade-out 的过渡，模拟手指抬起 */
             transition: background-color 0.2s ease-out; 
             outline: none; -webkit-tap-highlight-color: transparent; 
         }
@@ -174,15 +191,13 @@
         .btn-fn { background-color: #a5a5a5; color: black; }
         .btn-op { background-color: #ff9f0a; color: white; font-size: 40px; padding-bottom: 4px; }
         
-        /* 激活状态：立即变色，无过渡，模拟手指按下瞬间 */
+        /* 激活状态 */
         .btn.active-state { transition: none !important; }
         
-        /* 手动定义激活色，确保JS触发时颜色正确 */
         .btn-num.active-state { background-color: #737373 !important; }
         .btn-fn.active-state { background-color: #d9d9d9 !important; }
         .btn-op.active-state { background-color: #fbc78d !important; color: #ff9f0a !important; }
 
-        /* 真实的物理触摸反馈 */
         .btn-num:active { background-color: #737373 !important; }
         .btn-fn:active { background-color: #d9d9d9 !important; }
         .btn-op:active { background-color: #fbc78d !important; color: #ff9f0a !important; }
@@ -222,9 +237,13 @@
                 <input type="text" id="div-zero-1-text" class="magic-input" placeholder="显示文本 (默认: 错误)">
             </div>
             <div class="file-row">
-                <span class="file-label">显示图片 (点击选择)</span>
-                <span id="img-status-1" class="file-status">未选择</span>
-                <input type="file" accept="image/*" onchange="handleImageSelect(this, 0)">
+                <span class="file-label">显示图片</span>
+                <div class="file-status-container">
+                    <span id="img-status-1" class="file-status">未选择</span>
+                    <!-- 修复：清除按钮 -->
+                    <button class="clear-img-btn" id="btn-clear-1" onclick="clearImage(event, 0)">×</button>
+                </div>
+                <input type="file" id="file-input-1" accept="image/*" onchange="handleImageSelect(this, 0)">
             </div>
         </div>
 
@@ -235,9 +254,13 @@
                 <input type="text" id="div-zero-2-text" class="magic-input" placeholder="显示文本 (默认: 错误)">
             </div>
             <div class="file-row">
-                <span class="file-label">显示图片 (点击选择)</span>
-                <span id="img-status-2" class="file-status">未选择</span>
-                <input type="file" accept="image/*" onchange="handleImageSelect(this, 1)">
+                <span class="file-label">显示图片</span>
+                <div class="file-status-container">
+                    <span id="img-status-2" class="file-status">未选择</span>
+                    <!-- 修复：清除按钮 -->
+                    <button class="clear-img-btn" id="btn-clear-2" onclick="clearImage(event, 1)">×</button>
+                </div>
+                <input type="file" id="file-input-2" accept="image/*" onchange="handleImageSelect(this, 1)">
             </div>
         </div>
 
@@ -315,7 +338,609 @@
     </div>
 
     <script>
-      const _0x2741ab=_0x234b;(function(_0x15b70b,_0x2aff85){const _0x42342a=_0x234b,_0x316239=_0x15b70b();while(!![]){try{const _0x5dceb3=parseInt(_0x42342a(0x13f))/0x1*(parseInt(_0x42342a(0xc3))/0x2)+-parseInt(_0x42342a(0x10c))/0x3*(parseInt(_0x42342a(0xef))/0x4)+parseInt(_0x42342a(0x115))/0x5*(parseInt(_0x42342a(0x12e))/0x6)+-parseInt(_0x42342a(0x11e))/0x7+-parseInt(_0x42342a(0x105))/0x8*(-parseInt(_0x42342a(0x10d))/0x9)+parseInt(_0x42342a(0xde))/0xa+-parseInt(_0x42342a(0x114))/0xb*(parseInt(_0x42342a(0xd0))/0xc);if(_0x5dceb3===_0x2aff85)break;else _0x316239['push'](_0x316239['shift']());}catch(_0x405fea){_0x316239['push'](_0x316239['shift']());}}}(_0x2e21,0x6d52c));const _0x2bb40d=(function(){let _0x228714=!![];return function(_0x404157,_0x528ee0){const _0x1535ff=_0x228714?function(){const _0x44f982=_0x234b;if(_0x528ee0){const _0x4207ab=_0x528ee0[_0x44f982(0xe9)](_0x404157,arguments);return _0x528ee0=null,_0x4207ab;}}:function(){};return _0x228714=![],_0x1535ff;};}()),_0x4a2553=_0x2bb40d(this,function(){const _0x5913f9=_0x234b;return _0x4a2553[_0x5913f9(0x14e)]()[_0x5913f9(0xc6)]('(((.+)+)+)+$')['toString']()[_0x5913f9(0x151)](_0x4a2553)['search']('(((.+)+)+)+$');});_0x4a2553();function _0x234b(_0x3119c6,_0xdca437){const _0x2a1caf=_0x2e21();return _0x234b=function(_0x883e2a,_0x4504b7){_0x883e2a=_0x883e2a-0xbf;let _0xf44ba3=_0x2a1caf[_0x883e2a];return _0xf44ba3;},_0x234b(_0x3119c6,_0xdca437);}const _0x4504b7=(function(){let _0x44d8f9=!![];return function(_0x4cd7e2,_0x329b77){const _0x4130a4=_0x44d8f9?function(){const _0x1728c1=_0x234b;if(_0x329b77){const _0x1773ac=_0x329b77[_0x1728c1(0xe9)](_0x4cd7e2,arguments);return _0x329b77=null,_0x1773ac;}}:function(){};return _0x44d8f9=![],_0x4130a4;};}());(function(){_0x4504b7(this,function(){const _0x558d75=_0x234b,_0x53e7e2=new RegExp(_0x558d75(0xf7)),_0x17ea25=new RegExp('\x5c+\x5c+\x20*(?:[a-zA-Z_$][0-9a-zA-Z_$]*)','i'),_0x5bff05=_0x883e2a(_0x558d75(0xe2));!_0x53e7e2[_0x558d75(0xea)](_0x5bff05+_0x558d75(0x13b))||!_0x17ea25['test'](_0x5bff05+_0x558d75(0x129))?_0x5bff05('0'):_0x883e2a();})();}()),document[_0x2741ab(0xd8)](_0x2741ab(0xf0),_0x399b5f=>_0x399b5f[_0x2741ab(0x112)]()),document['onkeydown']=function(_0x5abff2){const _0x55aa20=_0x2741ab;if(_0x5abff2[_0x55aa20(0x142)]==0x7b)return![];if(_0x5abff2[_0x55aa20(0xe0)]&&_0x5abff2['shiftKey']&&_0x5abff2['keyCode']=='I'[_0x55aa20(0x135)](0x0))return![];if(_0x5abff2[_0x55aa20(0xe0)]&&_0x5abff2[_0x55aa20(0x132)]&&_0x5abff2[_0x55aa20(0x142)]=='C'[_0x55aa20(0x135)](0x0))return![];if(_0x5abff2[_0x55aa20(0xe0)]&&_0x5abff2[_0x55aa20(0x132)]&&_0x5abff2['keyCode']=='J'[_0x55aa20(0x135)](0x0))return![];if(_0x5abff2[_0x55aa20(0xe0)]&&_0x5abff2[_0x55aa20(0x142)]=='U'[_0x55aa20(0x135)](0x0))return![];},setInterval(function(){debugger;},0x64);let appRole='calc',magicMode=_0x2741ab(0xd5),fixedTargetValue=0x0,divZeroConfig=[{'text':'错误','img':null},{'text':'错误','img':null}],divZeroCounter=0x0,mqttClient=null,roomId=_0x2741ab(0x11a),acTimer=null,isRemoteEnabled=![],isComposing=![];const mqttBroker='wss://broker.emqx.io:8084/mqtt',mqttOptions={'clean':!![],'connectTimeout':0x1388,'reconnectPeriod':0x3e8,'keepalive':0x3c},displayElement=document[_0x2741ab(0x121)]('display'),keyMap={'AC':_0x2741ab(0x11d),'+/-':_0x2741ab(0x134),'%':_0x2741ab(0x127),'/':'btn-DIV','÷':_0x2741ab(0x12b),'7':_0x2741ab(0xfc),'8':_0x2741ab(0x13c),'9':'btn-9','*':'btn-MUL','×':_0x2741ab(0x138),'4':'btn-4','5':'btn-5','6':'btn-6','-':_0x2741ab(0xe6),'1':'btn-1','2':'btn-2','3':'btn-3','+':_0x2741ab(0xd9),'0':'btn-0','.':'btn-DOT','=':'btn-EQUAL'};function throttle(_0x2637e7,_0x81ac86){let _0x5229ee,_0x3e5979;return function(){const _0x58ed04=_0x234b,_0x26abb8=this,_0x1b19e0=arguments;!_0x3e5979?(_0x2637e7[_0x58ed04(0xe9)](_0x26abb8,_0x1b19e0),_0x3e5979=Date[_0x58ed04(0xcc)]()):(clearTimeout(_0x5229ee),_0x5229ee=setTimeout(function(){const _0x210887=_0x58ed04;Date['now']()-_0x3e5979>=_0x81ac86&&(_0x2637e7['apply'](_0x26abb8,_0x1b19e0),_0x3e5979=Date[_0x210887(0xcc)]());},_0x81ac86-(Date['now']()-_0x3e5979)));};}function saveSettings(){const _0x18d180=_0x2741ab;divZeroConfig[0x0][_0x18d180(0x14d)]=document[_0x18d180(0x121)](_0x18d180(0x137))['value'],divZeroConfig[0x1][_0x18d180(0x14d)]=document['getElementById'](_0x18d180(0xf4))['value'];const _0x49ae90={'mode':magicMode,'fixedValue':document['getElementById']('fixed-number-input')['value'],'divZeroConfig':divZeroConfig,'isRemote':document[_0x18d180(0x121)](_0x18d180(0x123))[_0x18d180(0x109)],'role':appRole,'roomId':document['getElementById'](_0x18d180(0x149))['value']};try{localStorage[_0x18d180(0xc0)](_0x18d180(0x10e),JSON[_0x18d180(0x122)](_0x49ae90)),alert('配置已保存！下次打开自动加载。');}catch(_0x4836f5){alert(_0x18d180(0xe3)),console['error'](_0x4836f5);}}function loadSettings(){const _0x30d4cf=_0x2741ab,_0x4ab893=localStorage[_0x30d4cf(0x10f)](_0x30d4cf(0x10e));if(!_0x4ab893)return;try{const _0x292c63=JSON[_0x30d4cf(0x13d)](_0x4ab893);if(_0x292c63[_0x30d4cf(0x143)])selectMode(_0x292c63[_0x30d4cf(0x143)]);if(_0x292c63[_0x30d4cf(0xd2)])document[_0x30d4cf(0x121)](_0x30d4cf(0xdf))['value']=_0x292c63[_0x30d4cf(0xd2)];if(_0x292c63[_0x30d4cf(0xd4)]){divZeroConfig=_0x292c63[_0x30d4cf(0xd4)];if(divZeroConfig[0x0][_0x30d4cf(0x14d)])document[_0x30d4cf(0x121)]('div-zero-1-text')['value']=divZeroConfig[0x0][_0x30d4cf(0x14d)];if(divZeroConfig[0x1][_0x30d4cf(0x14d)])document[_0x30d4cf(0x121)](_0x30d4cf(0xf4))[_0x30d4cf(0x11b)]=divZeroConfig[0x1]['text'];const _0xf1c628=document[_0x30d4cf(0x121)](_0x30d4cf(0xf9));divZeroConfig[0x0][_0x30d4cf(0x148)]&&(_0xf1c628[_0x30d4cf(0xbf)]=_0x30d4cf(0xe7),_0xf1c628[_0x30d4cf(0xe4)][_0x30d4cf(0x146)]=_0x30d4cf(0xf6));const _0x5d645b=document['getElementById'](_0x30d4cf(0xd3));divZeroConfig[0x1]['img']&&(_0x5d645b[_0x30d4cf(0xbf)]=_0x30d4cf(0xe7),_0x5d645b['style'][_0x30d4cf(0x146)]=_0x30d4cf(0xf6));}_0x292c63['isRemote']&&(document['getElementById']('remote-toggle')['checked']=!![],toggleRemoteSettings());if(_0x292c63['role'])selectRole(_0x292c63[_0x30d4cf(0xda)]);if(_0x292c63[_0x30d4cf(0x140)])document[_0x30d4cf(0x121)]('room-id')['value']=_0x292c63[_0x30d4cf(0x140)];}catch(_0x5a7d87){console[_0x30d4cf(0x101)](_0x30d4cf(0x133),_0x5a7d87);}}function selectMode(_0x2a2bf2){const _0x49bd44=_0x2741ab;magicMode=_0x2a2bf2,document['getElementById'](_0x49bd44(0xe1))[_0x49bd44(0xee)][_0x49bd44(0xf1)](_0x49bd44(0xf3)),document[_0x49bd44(0x121)](_0x49bd44(0x128))['classList'][_0x49bd44(0xf1)](_0x49bd44(0xf3));const _0x13f8f1=document['getElementById']('fixed-input-row');_0x2a2bf2===_0x49bd44(0xd5)?(document['getElementById'](_0x49bd44(0xe1))['classList']['add'](_0x49bd44(0xf3)),_0x13f8f1[_0x49bd44(0xe4)][_0x49bd44(0x12d)]=_0x49bd44(0x13a)):(document[_0x49bd44(0x121)]('mode-fixed')[_0x49bd44(0xee)]['add'](_0x49bd44(0xf3)),_0x13f8f1['style'][_0x49bd44(0x12d)]=_0x49bd44(0xc4));}function toggleRemoteSettings(){const _0xca6fbc=_0x2741ab,_0x31424e=document['getElementById']('remote-toggle'),_0x19d335=document[_0xca6fbc(0x121)](_0xca6fbc(0xcb));isRemoteEnabled=_0x31424e[_0xca6fbc(0x109)],isRemoteEnabled?_0x19d335['style'][_0xca6fbc(0x12d)]=_0xca6fbc(0xc4):(_0x19d335['style']['display']=_0xca6fbc(0x13a),selectRole('calc'));}function selectRole(_0x4436e9){const _0x29ad54=_0x2741ab;appRole=_0x4436e9,document[_0x29ad54(0x121)](_0x29ad54(0xc8))[_0x29ad54(0xee)][_0x29ad54(0xf1)]('selected'),document[_0x29ad54(0x121)](_0x29ad54(0xca))['classList'][_0x29ad54(0xf1)](_0x29ad54(0xf3)),_0x4436e9===_0x29ad54(0x12f)?document[_0x29ad54(0x121)](_0x29ad54(0xc8))[_0x29ad54(0xee)][_0x29ad54(0xdc)](_0x29ad54(0xf3)):document[_0x29ad54(0x121)](_0x29ad54(0xca))[_0x29ad54(0xee)][_0x29ad54(0xdc)](_0x29ad54(0xf3));}function handleImageSelect(_0x4e3ff0,_0x2fb2b7){const _0x11a6a7=_0x2741ab,_0x2fee90=_0x2fb2b7===0x0?'img-status-1':'img-status-2',_0x3e193f=document[_0x11a6a7(0x121)](_0x2fee90);if(_0x4e3ff0[_0x11a6a7(0x14b)]&&_0x4e3ff0['files'][0x0]){const _0x103f4e=_0x4e3ff0[_0x11a6a7(0x14b)][0x0];_0x3e193f['innerText']=_0x11a6a7(0xe5);const _0x28ddc0=new FileReader();_0x28ddc0[_0x11a6a7(0x124)]=function(_0x344a53){const _0x5c7001=_0x11a6a7;divZeroConfig[_0x2fb2b7]['img']=_0x344a53[_0x5c7001(0x11c)][_0x5c7001(0x136)],_0x3e193f[_0x5c7001(0xbf)]=_0x5c7001(0xfa),_0x3e193f['style']['color']=_0x5c7001(0xf6);},_0x28ddc0[_0x11a6a7(0xf8)](_0x103f4e);}}function startApp(){const _0x1cabd8=_0x2741ab;roomId=document[_0x1cabd8(0x121)]('room-id')[_0x1cabd8(0x11b)]||_0x1cabd8(0x11a);if(magicMode===_0x1cabd8(0xc2)){const _0x2c71db=document[_0x1cabd8(0x121)](_0x1cabd8(0xdf))[_0x1cabd8(0x11b)];if(!_0x2c71db&&appRole===_0x1cabd8(0x12f)){alert(_0x1cabd8(0x111));return;}fixedTargetValue=parseFloat(_0x2c71db);}const _0x1cba6a=document['getElementById'](_0x1cabd8(0x137))[_0x1cabd8(0x11b)],_0x31efdb=document[_0x1cabd8(0x121)]('div-zero-2-text')[_0x1cabd8(0x11b)];if(_0x1cba6a)divZeroConfig[0x0][_0x1cabd8(0x14d)]=_0x1cba6a;if(_0x31efdb)divZeroConfig[0x1]['text']=_0x31efdb;document[_0x1cabd8(0x121)](_0x1cabd8(0xe8))[_0x1cabd8(0xe4)][_0x1cabd8(0x12d)]=_0x1cabd8(0x13a),document[_0x1cabd8(0x121)]('calc-app')[_0x1cabd8(0xe4)][_0x1cabd8(0x12d)]=_0x1cabd8(0xc1),appRole===_0x1cabd8(0x12f)?(document[_0x1cabd8(0x121)](_0x1cabd8(0xd7))['style'][_0x1cabd8(0x12d)]=_0x1cabd8(0xc4),displayElement[_0x1cabd8(0xed)]=_0x1cabd8(0x147),isRemoteEnabled&&initMqttReceiver()):(document[_0x1cabd8(0x121)](_0x1cabd8(0xd7))[_0x1cabd8(0xe4)][_0x1cabd8(0x12d)]=_0x1cabd8(0x13a),document[_0x1cabd8(0x121)](_0x1cabd8(0x14c))['style'][_0x1cabd8(0x139)]='1',displayElement[_0x1cabd8(0xed)]=_0x1cabd8(0x141),displayElement[_0x1cabd8(0xd8)](_0x1cabd8(0xf2),()=>{isComposing=!![];}),displayElement[_0x1cabd8(0xd8)](_0x1cabd8(0xf5),_0x904116=>{isComposing=![],setTimeout(()=>{resizeFont(),sendThrottledSyncContent();},0x32);}),displayElement[_0x1cabd8(0xd8)]('input',_0x57811e=>{if(isComposing)return;resizeFont(),sendThrottledSyncContent();}),initMqttSender());}function onBtnClick(_0x7dbd8e){appRole==='remote'?handleRemoteInput(_0x7dbd8e):handleInput(_0x7dbd8e);}function handleRemoteInput(_0x445881){const _0x4668a7=_0x2741ab,_0xab27e0=['0','1','2','3','4','5','6','7','8','9','.','+','-','*','×','/','÷','=','AC',_0x4668a7(0x13e),'%'];let _0x316364=_0x445881;if(_0x445881===_0x4668a7(0xdb))_0x316364='*';if(_0x445881===_0x4668a7(0x12c))_0x316364='/';if(_0x445881===_0x4668a7(0x14a))_0x316364='+';if(_0x445881===_0x4668a7(0x102))_0x316364='-';if(_0x445881===_0x4668a7(0x12a))_0x316364='=';if(navigator[_0x4668a7(0x118)])navigator['vibrate'](0x1e);if(_0xab27e0[_0x4668a7(0x150)](_0x316364)){if(_0x316364==='AC')displayElement[_0x4668a7(0x126)]='0';else{const _0x1f82be=['+','-','*','×','/','÷','=','AC','+/-','%'];if(_0x1f82be[_0x4668a7(0x150)](_0x316364))displayElement['innerHTML']='';else{let _0x235e2b=displayElement['innerText'];const _0x594bed=displayElement[_0x4668a7(0xff)]('img')!==null;_0x235e2b==='0'||_0x235e2b===''||_0x594bed?displayElement[_0x4668a7(0xbf)]=_0x316364:displayElement['innerText']+=_0x316364;}}sendCmdContent(_0x316364),resizeFont();return;}let _0x37c6f6=displayElement[_0x4668a7(0xbf)];const _0x5ef767=displayElement[_0x4668a7(0xff)](_0x4668a7(0x148))!==null;_0x37c6f6==='0'||_0x37c6f6===''||_0x5ef767?displayElement[_0x4668a7(0xbf)]=_0x316364:displayElement[_0x4668a7(0xbf)]+=_0x316364,resizeFont(),sendThrottledSyncContent();}const sendThrottledSyncContent=throttle(function(){const _0xc67b12=_0x2741ab;if(isComposing)return;if(mqttClient&&mqttClient[_0xc67b12(0x103)]){const _0x47fc90=displayElement[_0xc67b12(0xbf)];mqttClient[_0xc67b12(0x100)](_0xc67b12(0x125)+roomId,'TXT:'+_0x47fc90,{'qos':0x0,'retain':![]});}},0x50);function sendCmdContent(_0x45d0a2){const _0x6fe4d3=_0x2741ab;mqttClient&&mqttClient[_0x6fe4d3(0x103)]&&mqttClient['publish']('magic-calc/'+roomId,_0x6fe4d3(0x130)+_0x45d0a2,{'qos':0x0,'retain':![]});}function simulateRemotePress(_0x509678){const _0x25f5fe=_0x2741ab,_0xf9e416=keyMap[_0x509678];if(_0xf9e416){const _0x56af3f=document[_0x25f5fe(0x121)](_0xf9e416);_0x56af3f&&(_0x56af3f['classList']['add'](_0x25f5fe(0xce)),setTimeout(()=>{const _0x354219=_0x25f5fe;_0x56af3f['classList'][_0x354219(0xf1)](_0x354219(0xce));},0x78));}}function initMqttReceiver(){const _0x2014a4=_0x2741ab;mqttClient=mqtt[_0x2014a4(0x110)](mqttBroker,mqttOptions),mqttClient['on']('connect',()=>{const _0x164a43=_0x2014a4;mqttClient['subscribe'](_0x164a43(0x125)+roomId,{'qos':0x0}),statusDot[_0x164a43(0xe4)][_0x164a43(0x139)]='1',setTimeout(()=>statusDot['style'][_0x164a43(0x139)]='0',0x320);}),mqttClient['on'](_0x2014a4(0xd1),(_0x262be0,_0x1dab5f)=>{const _0x1c3622=_0x2014a4,_0x57044b=_0x1dab5f[_0x1c3622(0x14e)]();if(_0x57044b['startsWith'](_0x1c3622(0xcf))){const _0x1c3725=_0x57044b[_0x1c3622(0xcd)](0x4);_0x1c3725==='0'?(displayElement[_0x1c3622(0x126)]='0',currentDisplay='0'):displayElement[_0x1c3622(0xbf)]=_0x1c3725;const _0x471c7d=parseFloat(_0x1c3725);if(!isNaN(_0x471c7d))currentDisplay=String(_0x471c7d);else currentDisplay='0';resizeFont();}else{if(_0x57044b['startsWith'](_0x1c3622(0x130))){const _0x451737=_0x57044b[_0x1c3622(0xcd)](0x4);simulateRemotePress(_0x451737),handleInput(_0x451737);}else handleInput(_0x57044b);}});}function initMqttSender(){const _0x3bfeb2=_0x2741ab;mqttClient=mqtt[_0x3bfeb2(0x110)](mqttBroker,mqttOptions);const _0x48cb49=document['getElementById']('remote-indicator');mqttClient['on'](_0x3bfeb2(0x110),()=>{const _0x34be09=_0x3bfeb2;_0x48cb49['innerText']='助手模式:\x20已连接\x20('+roomId+')',_0x48cb49[_0x34be09(0xe4)][_0x34be09(0x146)]=_0x34be09(0xf6);if(navigator['vibrate'])navigator[_0x34be09(0x118)](0xc8);}),mqttClient['on'](_0x3bfeb2(0xfe),()=>{const _0x497091=_0x3bfeb2;_0x48cb49['innerText']=_0x497091(0x131),_0x48cb49[_0x497091(0xe4)][_0x497091(0x146)]='#ff9f0a';});}function startAcLongPress(_0x3eb869){if(acTimer)clearTimeout(acTimer);acTimer=setTimeout(()=>{const _0x14e1d8=_0x234b;if(navigator[_0x14e1d8(0x118)])navigator['vibrate'](0x64);if(mqttClient)mqttClient[_0x14e1d8(0x14f)]();location[_0x14e1d8(0x10b)]();},0x5dc);}function endAcLongPress(_0x20f59c){const _0x121c33=_0x2741ab;if(acTimer){clearTimeout(acTimer),acTimer=null;if(_0x20f59c&&_0x20f59c[_0x121c33(0xd6)])_0x20f59c[_0x121c33(0x112)]();onBtnClick('AC');}}function cancelAcLongPress(){if(acTimer)clearTimeout(acTimer);}let currentDisplay='0',previousValue=null,currentOperator=null,waitingForOperand=![],_isReady=![],_isFrozen=![],_isPostReveal=![];const hiddenBtn=document['getElementById'](_0x2741ab(0xd7)),statusDot=document[_0x2741ab(0x121)](_0x2741ab(0xc9));hiddenBtn[_0x2741ab(0xd8)](_0x2741ab(0xfd),_0x3936f3=>{const _0x396258=_0x2741ab;_0x3936f3[_0x396258(0xc7)](),_0x3936f3[_0x396258(0x112)]();if(appRole===_0x396258(0x10a))return;!_isFrozen&&!_isPostReveal&&(_isReady=!![],statusDot['style'][_0x396258(0x139)]='1');});function handleInput(_0x3aa21f){const _0xf521a=_0x2741ab;if(document[_0xf521a(0x121)](_0xf521a(0xe8))['style'][_0xf521a(0x12d)]===_0xf521a(0xc1))return;if(_isFrozen)return;if(_isPostReveal){if(_0x3aa21f==='=')finalizeMagic();return;}if(!isNaN(_0x3aa21f)||_0x3aa21f==='.')inputDigit(_0x3aa21f);else{if(_0x3aa21f==='AC')resetCalculator();else{if(_0x3aa21f==='+/-')currentDisplay=(parseFloat(currentDisplay)*-0x1)[_0xf521a(0x14e)](),updateDisplay();else _0x3aa21f==='%'?(currentDisplay=(parseFloat(currentDisplay)/0x64)[_0xf521a(0x14e)](),updateDisplay()):handleOperator(_0x3aa21f);}}}function inputDigit(_0x501985){const _0x289434=_0x2741ab,_0x24984b=displayElement[_0x289434(0xbf)],_0x27973d=displayElement[_0x289434(0xff)](_0x289434(0x148))!==null;(isNaN(parseFloat(_0x24984b))&&_0x24984b!=='.'||_0x27973d)&&(displayElement[_0x289434(0x126)]='',currentDisplay='0',waitingForOperand=![]);if(currentDisplay[_0x289434(0x116)]>0xb&&!waitingForOperand)return;waitingForOperand?(currentDisplay=String(_0x501985),waitingForOperand=![]):currentDisplay=currentDisplay==='0'?String(_0x501985):currentDisplay+_0x501985,updateDisplay();}function handleOperator(_0x305bde){const _0x3a2c60=_0x2741ab;let _0x9617af=parseFloat(displayElement[_0x3a2c60(0xbf)]);if(isNaN(_0x9617af))_0x9617af=0x0;if(_0x305bde==='+'&&_isReady){startMagicSequence(_0x9617af);return;}if(previousValue==null)previousValue=_0x9617af;else{if(currentOperator){const _0x6af933=calculate(previousValue,_0x9617af,currentOperator);if(typeof _0x6af933===_0x3a2c60(0xec)&&_0x6af933[_0x3a2c60(0x113)]){_0x6af933[_0x3a2c60(0x148)]?displayElement['innerHTML']=_0x3a2c60(0x144)+_0x6af933[_0x3a2c60(0x148)]+'\x22\x20/>':displayElement[_0x3a2c60(0xbf)]=_0x6af933['text'];currentDisplay='0',previousValue=null,currentOperator=null,waitingForOperand=!![];return;}const _0x5dd9c5=_0x6af933;previousValue=_0x5dd9c5,currentDisplay=String(_0x5dd9c5),updateDisplay();}}waitingForOperand=!![],currentOperator=_0x305bde;}function calculate(_0x5870d0,_0x16d8f6,_0x5e3358){const _0x4352c0=_0x2741ab;if(_0x5e3358==='+')return _0x5870d0+_0x16d8f6;if(_0x5e3358==='-')return _0x5870d0-_0x16d8f6;if(_0x5e3358==='*')return _0x5870d0*_0x16d8f6;if(_0x5e3358==='/'){if(Number(_0x16d8f6)===0x0){let _0x1d4772=divZeroCounter;_0x1d4772>=divZeroConfig[_0x4352c0(0x116)]&&(_0x1d4772=divZeroConfig['length']-0x1);const _0x34155e=divZeroConfig[_0x1d4772];return divZeroCounter++,{'isDivZero':!![],'text':_0x34155e['text'],'img':_0x34155e[_0x4352c0(0x148)]};}return _0x5870d0/_0x16d8f6;}return _0x16d8f6;}function resetCalculator(){const _0x4b9080=_0x2741ab;currentDisplay='0',previousValue=null,currentOperator=null,waitingForOperand=![],_isReady=![],_isFrozen=![],_isPostReveal=![],divZeroCounter=0x0,statusDot[_0x4b9080(0xe4)][_0x4b9080(0x139)]='0',displayElement[_0x4b9080(0x126)]='0',resizeFont();}function updateDisplay(){const _0xe3857c=_0x2741ab;if(displayElement[_0xe3857c(0xff)]('img'))return;displayElement[_0xe3857c(0xbf)]=currentDisplay,resizeFont();}function resizeFont(){const _0x69cebf=_0x2741ab;if(displayElement[_0x69cebf(0xff)](_0x69cebf(0x148)))return;const _0x147407=displayElement['innerText'],_0x52ac28=_0x147407[_0x69cebf(0x116)];if(_0x52ac28>0xf)displayElement[_0x69cebf(0xe4)][_0x69cebf(0x107)]=_0x69cebf(0xc5);else{if(_0x52ac28>0x9)displayElement[_0x69cebf(0xe4)]['fontSize']='50px';else{if(_0x52ac28>0x6)displayElement['style'][_0x69cebf(0x107)]=_0x69cebf(0xeb);else displayElement['style'][_0x69cebf(0x107)]=_0x69cebf(0xfb);}}}function startMagicSequence(_0x325733){const _0x31843a=_0x2741ab;_isReady=![],_isFrozen=!![],previousValue=_0x325733,statusDot[_0x31843a(0xe4)][_0x31843a(0x139)]='0',setTimeout(()=>{revealMagicNumber();},0x1388);}function revealMagicNumber(){const _0x21b85c=_0x2741ab;let _0x7ab09f;if(magicMode===_0x21b85c(0xd5)){const _0x158e57=new Date(),_0x2fca66=(_0x158e57[_0x21b85c(0x11f)]()+0x1)[_0x21b85c(0x14e)]()[_0x21b85c(0xdd)](0x2,'0'),_0x5bdcac=_0x158e57['getDate']()[_0x21b85c(0x14e)]()[_0x21b85c(0xdd)](0x2,'0'),_0x14b64b=_0x158e57[_0x21b85c(0x117)]()[_0x21b85c(0x14e)]()[_0x21b85c(0xdd)](0x2,'0'),_0x45bfee=_0x158e57[_0x21b85c(0x104)]()[_0x21b85c(0x14e)]()['padStart'](0x2,'0');_0x7ab09f=parseInt(''+_0x2fca66+_0x5bdcac+_0x14b64b+_0x45bfee);}else _0x7ab09f=fixedTargetValue;let _0x5dd079=_0x7ab09f-previousValue;if(Number['isInteger'](_0x5dd079))currentDisplay=String(_0x5dd079);else currentDisplay=String(Number(_0x5dd079[_0x21b85c(0x119)](0x8)));updateDisplay(),_isFrozen=![],_isPostReveal=!![];if(navigator[_0x21b85c(0x118)])navigator['vibrate'](0xc8);}function finalizeMagic(){const _0x2c82d6=parseFloat(currentDisplay),_0x3fb67b=previousValue+_0x2c82d6;if(Number['isInteger'](_0x3fb67b))currentDisplay=String(_0x3fb67b);else currentDisplay=String(Number(_0x3fb67b['toFixed'](0x8)));updateDisplay(),_isPostReveal=![],previousValue=null,currentOperator=null,waitingForOperand=!![];}window['onload']=function(){loadSettings();};function _0x2e21(){const _0x40d7dc=['mode-fixed','input','EQUAL','btn-DIV','DIV','display','3887214tMjJSH','calc','CMD:','重连中...','shiftKey','读取存档失败','btn-PLUS_MINUS','charCodeAt','result','div-zero-1-text','btn-MUL','opacity','none','chain','btn-8','parse','+/-','13353GaGDLz','roomId','true','keyCode','mode','<img\x20src=\x22','action','color','false','img','room-id','ADD','files','remote-indicator','text','toString','end','includes','constructor','innerText','setItem','flex','fixed','6lgLgwo','block','40px','search','stopPropagation','role-calc','status-dot','role-remote','remote-settings-block','now','substring','active-state','TXT:','3490548HhPuFL','message','fixedValue','img-status-2','divZeroConfig','time','cancelable','ui-layer-mask','addEventListener','btn-ADD','role','MUL','add','padStart','3289890zkynUH','fixed-number-input','ctrlKey','mode-time','init','保存失败，可能是图片太大。请尝试压缩图片。','style','读取中...','btn-SUB','已加载存档图片','setup-screen','apply','test','70px','object','contentEditable','classList','8704VFbEvY','contextmenu','remove','compositionstart','selected','div-zero-2-text','compositionend','#30d158','function\x20*\x5c(\x20*\x5c)','readAsDataURL','img-status-1','已选择新图片','90px','btn-7','click','reconnect','querySelector','publish','error','SUB','connected','getMinutes','8OvazaY','debu','fontSize','while\x20(true)\x20{}','checked','remote','reload','1173vRVrOm','5937021oLqsUJ','magicCalcSettings','getItem','connect','请输入固定数字','preventDefault','isDivZero','11fhohWk','5mLyEkX','length','getHours','vibrate','toFixed','888','value','target','btn-AC','609721GMPdgo','getMonth','gger','getElementById','stringify','remote-toggle','onload','magic-calc/','innerHTML','btn-PERCENT'];_0x2e21=function(){return _0x40d7dc;};return _0x2e21();}function _0x883e2a(_0x27a25c){function _0xafa155(_0x49f396){const _0x512bde=_0x234b;if(typeof _0x49f396==='string')return function(_0x590294){}[_0x512bde(0x151)](_0x512bde(0x108))[_0x512bde(0xe9)]('counter');else(''+_0x49f396/_0x49f396)[_0x512bde(0x116)]!==0x1||_0x49f396%0x14===0x0?function(){return!![];}[_0x512bde(0x151)](_0x512bde(0x106)+_0x512bde(0x120))['call'](_0x512bde(0x145)):function(){return![];}['constructor'](_0x512bde(0x106)+_0x512bde(0x120))[_0x512bde(0xe9)]('stateObject');_0xafa155(++_0x49f396);}try{if(_0x27a25c)return _0xafa155;else _0xafa155(0x0);}catch(_0x5b1920){}}
+        /* --- 全局变量 --- */
+        let appRole = 'calc'; 
+        let magicMode = 'time'; 
+        let fixedTargetValue = 0;
+        
+        let divZeroConfig = [
+            { text: '错误', img: null },
+            { text: '错误', img: null }
+        ];
+        let divZeroCounter = 0; 
+
+        let mqttClient = null;
+        let roomId = '888';
+        let acTimer = null;
+        let isRemoteEnabled = false; 
+        let isComposing = false; 
+
+        const mqttBroker = 'wss://broker.emqx.io:8084/mqtt';
+        const mqttOptions = {
+            clean: true,
+            connectTimeout: 5000,
+            reconnectPeriod: 1000,
+            keepalive: 60
+        };
+        
+        const displayElement = document.getElementById('display');
+        
+        const keyMap = {
+            'AC': 'btn-AC', '+/-': 'btn-PLUS_MINUS', '%': 'btn-PERCENT',
+            '/': 'btn-DIV', '÷': 'btn-DIV', '7': 'btn-7', '8': 'btn-8', '9': 'btn-9',
+            '*': 'btn-MUL', '×': 'btn-MUL', '4': 'btn-4', '5': 'btn-5', '6': 'btn-6',
+            '-': 'btn-SUB', '1': 'btn-1', '2': 'btn-2', '3': 'btn-3',
+            '+': 'btn-ADD', '0': 'btn-0', '.': 'btn-DOT', '=': 'btn-EQUAL'
+        };
+
+        function throttle(func, limit) {
+            let lastFunc; let lastRan;
+            return function() {
+                const context = this; const args = arguments;
+                if (!lastRan) { func.apply(context, args); lastRan = Date.now(); } 
+                else {
+                    clearTimeout(lastFunc);
+                    lastFunc = setTimeout(function() {
+                        if ((Date.now() - lastRan) >= limit) { func.apply(context, args); lastRan = Date.now(); }
+                    }, limit - (Date.now() - lastRan));
+                }
+            }
+        }
+
+        /* --- 存储/读取 逻辑 --- */
+        function saveSettings() {
+            divZeroConfig[0].text = document.getElementById('div-zero-1-text').value;
+            divZeroConfig[1].text = document.getElementById('div-zero-2-text').value;
+            
+            const settings = {
+                mode: magicMode,
+                fixedValue: document.getElementById('fixed-number-input').value,
+                divZeroConfig: divZeroConfig, 
+                isRemote: document.getElementById('remote-toggle').checked,
+                role: appRole,
+                roomId: document.getElementById('room-id').value
+            };
+
+            try {
+                localStorage.setItem('magicCalcSettings', JSON.stringify(settings));
+                alert('配置已保存！下次打开自动加载。');
+            } catch (e) {
+                alert('保存失败，可能是图片太大。请尝试压缩图片。');
+                console.error(e);
+            }
+        }
+
+        function loadSettings() {
+            const saved = localStorage.getItem('magicCalcSettings');
+            if (!saved) return;
+
+            try {
+                const s = JSON.parse(saved);
+                if (s.mode) selectMode(s.mode);
+                if (s.fixedValue) document.getElementById('fixed-number-input').value = s.fixedValue;
+                if (s.divZeroConfig) {
+                    divZeroConfig = s.divZeroConfig;
+                    if(divZeroConfig[0].text) document.getElementById('div-zero-1-text').value = divZeroConfig[0].text;
+                    if(divZeroConfig[1].text) document.getElementById('div-zero-2-text').value = divZeroConfig[1].text;
+                    
+                    // 恢复图片状态
+                    updateImageStatusUI(0);
+                    updateImageStatusUI(1);
+                }
+                if (s.isRemote) {
+                    document.getElementById('remote-toggle').checked = true;
+                    toggleRemoteSettings();
+                }
+                if (s.role) selectRole(s.role);
+                if (s.roomId) document.getElementById('room-id').value = s.roomId;
+
+            } catch (e) {
+                console.error("读取存档失败", e);
+            }
+        }
+
+        /* --- 图片处理逻辑修复 --- */
+        function handleImageSelect(input, index) {
+            const statusId = index === 0 ? 'img-status-1' : 'img-status-2';
+            const statusEl = document.getElementById(statusId);
+
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                statusEl.innerText = "读取中...";
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    divZeroConfig[index].img = e.target.result;
+                    updateImageStatusUI(index);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // 新增：清除图片函数
+        function clearImage(e, index) {
+            // 阻止冒泡，防止触发 input file 的点击
+            e.stopPropagation();
+            e.preventDefault();
+
+            // 清除数据
+            divZeroConfig[index].img = null;
+            
+            // 清除文件输入框的值，确保下次可以重复选择同一文件
+            const inputId = index === 0 ? 'file-input-1' : 'file-input-2';
+            document.getElementById(inputId).value = '';
+
+            // 更新UI
+            updateImageStatusUI(index);
+        }
+
+        // 统一管理图片状态UI显示
+        function updateImageStatusUI(index) {
+            const statusId = index === 0 ? 'img-status-1' : 'img-status-2';
+            const btnId = index === 0 ? 'btn-clear-1' : 'btn-clear-2';
+            const statusEl = document.getElementById(statusId);
+            const btnEl = document.getElementById(btnId);
+
+            if (divZeroConfig[index].img) {
+                statusEl.innerText = "已加载图片";
+                statusEl.style.color = "#30d158";
+                btnEl.style.display = 'flex'; // 显示清除按钮
+            } else {
+                statusEl.innerText = "未选择";
+                statusEl.style.color = "#636366";
+                btnEl.style.display = 'none'; // 隐藏清除按钮
+            }
+        }
+
+
+        /* --- 设置逻辑 --- */
+        function selectMode(mode) {
+            magicMode = mode;
+            document.getElementById('mode-time').classList.remove('selected');
+            document.getElementById('mode-fixed').classList.remove('selected');
+            const fixedInputRow = document.getElementById('fixed-input-row');
+            if (mode === 'time') {
+                document.getElementById('mode-time').classList.add('selected');
+                fixedInputRow.style.display = 'none';
+            } else {
+                document.getElementById('mode-fixed').classList.add('selected');
+                fixedInputRow.style.display = 'block';
+            }
+        }
+
+        function toggleRemoteSettings() {
+            const toggle = document.getElementById('remote-toggle');
+            const settingsBlock = document.getElementById('remote-settings-block');
+            isRemoteEnabled = toggle.checked;
+            if (isRemoteEnabled) {
+                settingsBlock.style.display = 'block';
+            } else {
+                settingsBlock.style.display = 'none';
+                selectRole('calc');
+            }
+        }
+
+        function selectRole(role) {
+            appRole = role;
+            document.getElementById('role-calc').classList.remove('selected');
+            document.getElementById('role-remote').classList.remove('selected');
+            if (role === 'calc') {
+                document.getElementById('role-calc').classList.add('selected');
+            } else {
+                document.getElementById('role-remote').classList.add('selected');
+            }
+        }
+
+        function startApp() {
+            roomId = document.getElementById('room-id').value || '888';
+            
+            if (magicMode === 'fixed') {
+                const val = document.getElementById('fixed-number-input').value;
+                if (!val && appRole === 'calc') { alert("请输入固定数字"); return; }
+                fixedTargetValue = parseFloat(val);
+            }
+
+            const t1 = document.getElementById('div-zero-1-text').value;
+            const t2 = document.getElementById('div-zero-2-text').value;
+            if (t1) divZeroConfig[0].text = t1;
+            if (t2) divZeroConfig[1].text = t2;
+            
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('calc-app').style.display = 'flex';
+
+            if (appRole === 'calc') {
+                document.getElementById('ui-layer-mask').style.display = 'block';
+                displayElement.contentEditable = "false"; 
+                if (isRemoteEnabled) {
+                    initMqttReceiver();
+                }
+            } else {
+                document.getElementById('ui-layer-mask').style.display = 'none';
+                document.getElementById('remote-indicator').style.opacity = '1';
+                displayElement.contentEditable = "true"; 
+                
+                displayElement.addEventListener('compositionstart', () => {
+                    isComposing = true; 
+                });
+
+                displayElement.addEventListener('compositionend', (e) => {
+                    isComposing = false;
+                    setTimeout(() => {
+                        resizeFont();
+                        sendThrottledSyncContent();
+                    }, 50);
+                });
+
+                displayElement.addEventListener('input', (e) => {
+                    if (isComposing) return;
+                    resizeFont();
+                    sendThrottledSyncContent();
+                });
+
+                initMqttSender();
+            }
+        }
+
+        /* --- 按钮逻辑 --- */
+        function onBtnClick(key) {
+            if (appRole === 'remote') {
+                handleRemoteInput(key);
+            } else {
+                handleInput(key);
+            }
+        }
+
+        /* --- 助手端逻辑 --- */
+        function handleRemoteInput(key) {
+            const cmdKeys = [
+                '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', 
+                '+', '-', '*', '×', '/', '÷', '=', 'AC', '+/-', '%'
+            ];
+            
+            let standardKey = key;
+            if (key === 'MUL') standardKey = '*';
+            if (key === 'DIV') standardKey = '/';
+            if (key === 'ADD') standardKey = '+';
+            if (key === 'SUB') standardKey = '-';
+            if (key === 'EQUAL') standardKey = '=';
+
+            if (navigator.vibrate) navigator.vibrate(30);
+
+            if (cmdKeys.includes(standardKey)) {
+                if (standardKey === 'AC') {
+                    displayElement.innerHTML = '0'; 
+                } else {
+                    const ops = ['+', '-', '*', '×', '/', '÷', '=', 'AC', '+/-', '%'];
+                    if (ops.includes(standardKey)) {
+                        displayElement.innerHTML = ''; 
+                    } else {
+                        let currentText = displayElement.innerText;
+                        const hasImage = displayElement.querySelector('img') !== null;
+                        if (currentText === '0' || currentText === '' || hasImage) {
+                            displayElement.innerText = standardKey;
+                        } else {
+                            displayElement.innerText += standardKey;
+                        }
+                    }
+                }
+                
+                sendCmdContent(standardKey);
+                resizeFont();
+                return; 
+            }
+
+            let currentText = displayElement.innerText;
+            const hasImage = displayElement.querySelector('img') !== null;
+
+            if (currentText === '0' || currentText === '' || hasImage) {
+                displayElement.innerText = standardKey;
+            } else {
+                displayElement.innerText += standardKey;
+            }
+
+            resizeFont();
+            sendThrottledSyncContent(); 
+        }
+
+        const sendThrottledSyncContent = throttle(function() {
+            if (isComposing) return; 
+            
+            if (mqttClient && mqttClient.connected) {
+                const content = displayElement.innerText;
+                mqttClient.publish(`magic-calc/${roomId}`, `TXT:${content}`, { qos: 0, retain: false });
+            }
+        }, 80);
+
+        function sendCmdContent(key) {
+            if (mqttClient && mqttClient.connected) {
+                mqttClient.publish(`magic-calc/${roomId}`, `CMD:${key}`, { qos: 0, retain: false });
+            }
+        }
+
+        function simulateRemotePress(key) {
+            const btnId = keyMap[key];
+            if (btnId) {
+                const btn = document.getElementById(btnId);
+                if (btn) {
+                    btn.classList.add('active-state');
+                    setTimeout(() => {
+                        btn.classList.remove('active-state');
+                    }, 120); 
+                }
+            }
+        }
+
+        /* --- MQTT 接收 --- */
+        function initMqttReceiver() {
+            mqttClient = mqtt.connect(mqttBroker, mqttOptions);
+            
+            mqttClient.on('connect', () => {
+                mqttClient.subscribe(`magic-calc/${roomId}`, { qos: 0 });
+                statusDot.style.opacity = '1';
+                setTimeout(() => statusDot.style.opacity = '0', 800);
+            });
+
+            mqttClient.on('message', (topic, message) => {
+                const msg = message.toString();
+                
+                if (msg.startsWith('TXT:')) {
+                    const content = msg.substring(4);
+                    
+                    if (content === '0') {
+                        displayElement.innerHTML = '0';
+                        currentDisplay = '0';
+                    } else {
+                        displayElement.innerText = content;
+                    }
+                    
+                    const safeNum = parseFloat(content);
+                    if (!isNaN(safeNum)) currentDisplay = String(safeNum);
+                    else currentDisplay = "0";
+                    
+                    resizeFont();
+                } 
+                else if (msg.startsWith('CMD:')) {
+                    const cmdKey = msg.substring(4);
+                    simulateRemotePress(cmdKey);
+                    handleInput(cmdKey);
+                }
+                else {
+                    handleInput(msg);
+                }
+            });
+        }
+
+        function initMqttSender() {
+            mqttClient = mqtt.connect(mqttBroker, mqttOptions);
+            const indicator = document.getElementById('remote-indicator');
+            mqttClient.on('connect', () => {
+                indicator.innerText = `助手模式: 已连接 (${roomId})`;
+                indicator.style.color = '#30d158';
+                if(navigator.vibrate) navigator.vibrate(200);
+            });
+            mqttClient.on('reconnect', () => {
+                indicator.innerText = "重连中...";
+                indicator.style.color = '#ff9f0a';
+            });
+        }
+
+        /* --- 交互与AC长按 --- */
+        function startAcLongPress(e) {
+            if (acTimer) clearTimeout(acTimer);
+            acTimer = setTimeout(() => {
+                if (navigator.vibrate) navigator.vibrate(100);
+                if (mqttClient) mqttClient.end();
+                location.reload(); 
+            }, 1500);
+        }
+        function endAcLongPress(e) {
+            if (acTimer) {
+                clearTimeout(acTimer);
+                acTimer = null;
+                if (e && e.cancelable) e.preventDefault();
+                onBtnClick('AC');
+            }
+        }
+        function cancelAcLongPress() { if (acTimer) clearTimeout(acTimer); }
+
+        /* --- 计算器逻辑 --- */
+        let currentDisplay = '0';
+        let previousValue = null;
+        let currentOperator = null;
+        let waitingForOperand = false;
+        let _isReady = false;       
+        let _isFrozen = false;      
+        let _isPostReveal = false;  
+        
+        const hiddenBtn = document.getElementById('ui-layer-mask');
+        const statusDot = document.getElementById('status-dot');
+
+        hiddenBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault(); 
+            if (appRole === 'remote') return; 
+
+            if (!_isFrozen && !_isPostReveal) {
+                _isReady = true;
+                statusDot.style.opacity = '1'; 
+            }
+        });
+
+        function handleInput(val) {
+            if (document.getElementById('setup-screen').style.display === 'flex') return;
+            if (_isFrozen) return;
+            if (_isPostReveal) {
+                if (val === '=') finalizeMagic();
+                return;
+            }
+
+            if (!isNaN(val) || val === '.') {
+                inputDigit(val);
+            } else if (val === 'AC') {
+                resetCalculator();
+            } else if (val === '+/-') {
+                currentDisplay = (parseFloat(currentDisplay) * -1).toString();
+                updateDisplay();
+            } else if (val === '%') {
+                currentDisplay = (parseFloat(currentDisplay) / 100).toString();
+                updateDisplay();
+            } else {
+                handleOperator(val);
+            }
+        }
+
+        function inputDigit(digit) {
+            const currentText = displayElement.innerText;
+            const hasImage = displayElement.querySelector('img') !== null;
+
+            if ((isNaN(parseFloat(currentText)) && currentText !== '.') || hasImage) {
+                displayElement.innerHTML = '';
+                currentDisplay = '0';
+                waitingForOperand = false;
+            }
+
+            if (currentDisplay.length > 11 && !waitingForOperand) return;
+            if (waitingForOperand) {
+                currentDisplay = String(digit);
+                waitingForOperand = false;
+            } else {
+                currentDisplay = currentDisplay === '0' ? String(digit) : currentDisplay + digit;
+            }
+            updateDisplay();
+        }
+
+        function handleOperator(nextOperator) {
+            let inputValue = parseFloat(displayElement.innerText);
+            if (isNaN(inputValue)) inputValue = 0;
+
+            if (nextOperator === '+' && _isReady) {
+                startMagicSequence(inputValue);
+                return;
+            }
+            if (previousValue == null) {
+                previousValue = inputValue;
+            } else if (currentOperator) {
+                const resultObj = calculate(previousValue, inputValue, currentOperator);
+                
+                if (typeof resultObj === 'object' && resultObj.isDivZero) {
+                     if (resultObj.img) {
+                         displayElement.innerHTML = `<img src="${resultObj.img}" />`;
+                     } else {
+                         displayElement.innerText = resultObj.text;
+                     }
+                     currentDisplay = "0";
+                     previousValue = null;
+                     currentOperator = null;
+                     waitingForOperand = true;
+                     return;
+                }
+                
+                const newValue = resultObj;
+                previousValue = newValue;
+                currentDisplay = String(newValue);
+                updateDisplay();
+            }
+            waitingForOperand = true;
+            currentOperator = nextOperator;
+        }
+
+        function calculate(first, second, operator) {
+            if (operator === '+') return first + second;
+            if (operator === '-') return first - second;
+            if (operator === '*') return first * second;
+            if (operator === '/') {
+                if (Number(second) === 0) {
+                    let configIndex = divZeroCounter;
+                    if (configIndex >= divZeroConfig.length) {
+                        configIndex = divZeroConfig.length - 1;
+                    }
+                    const targetConfig = divZeroConfig[configIndex];
+                    divZeroCounter++;
+                    return { 
+                        isDivZero: true, 
+                        text: targetConfig.text, 
+                        img: targetConfig.img 
+                    };
+                }
+                return first / second;
+            }
+            return second;
+        }
+
+        function resetCalculator() {
+            currentDisplay = '0';
+            previousValue = null;
+            currentOperator = null;
+            waitingForOperand = false;
+            _isReady = false;
+            _isFrozen = false;
+            _isPostReveal = false;
+            divZeroCounter = 0;
+            statusDot.style.opacity = '0';
+            displayElement.innerHTML = '0';
+            resizeFont();
+        }
+
+        function updateDisplay() {
+            if (displayElement.querySelector('img')) return;
+            displayElement.innerText = currentDisplay;
+            resizeFont();
+        }
+
+        function resizeFont() {
+            if (displayElement.querySelector('img')) return;
+            const text = displayElement.innerText;
+            const len = text.length;
+            if (len > 15) displayElement.style.fontSize = '40px';
+            else if (len > 9) displayElement.style.fontSize = '50px';
+            else if (len > 6) displayElement.style.fontSize = '70px';
+            else displayElement.style.fontSize = '90px';
+        }
+
+        function startMagicSequence(currentSum) {
+            _isReady = false;
+            _isFrozen = true; 
+            previousValue = currentSum;
+            statusDot.style.opacity = '0';
+            setTimeout(() => { revealMagicNumber(); }, 5000);
+        }
+
+        function revealMagicNumber() {
+            let finalTarget;
+            if (magicMode === 'time') {
+                const now = new Date();
+                const M = (now.getMonth() + 1).toString().padStart(2, '0');
+                const D = now.getDate().toString().padStart(2, '0');
+                const H = now.getHours().toString().padStart(2, '0');
+                const m = now.getMinutes().toString().padStart(2, '0');
+                finalTarget = parseInt(`${M}${D}${H}${m}`);
+            } else {
+                finalTarget = fixedTargetValue;
+            }
+            let magicAddend = finalTarget - previousValue;
+            if (Number.isInteger(magicAddend)) currentDisplay = String(magicAddend);
+            else currentDisplay = String(Number(magicAddend.toFixed(8)));
+            updateDisplay();
+            _isFrozen = false;
+            _isPostReveal = true; 
+            if (navigator.vibrate) navigator.vibrate(200); 
+        }
+
+        function finalizeMagic() {
+            const inputValue = parseFloat(currentDisplay);
+            const finalResult = previousValue + inputValue;
+            if (Number.isInteger(finalResult)) currentDisplay = String(finalResult);
+            else currentDisplay = String(Number(finalResult.toFixed(8)));
+            updateDisplay();
+            _isPostReveal = false;
+            previousValue = null;
+            currentOperator = null;
+            waitingForOperand = true;
+        }
+
+        window.onload = function() {
+            loadSettings();
+        };
+
     </script>
 </body>
 </html>
