@@ -1005,20 +1005,21 @@
         let snowAnimationId = null;
         
    // 1. 初始化帽子DOM (经典卡通弯曲版)
+  // 1. 初始化帽子DOM (软萌扁平完美复刻版)
         function initSantaHats() {
             const buttons = document.querySelectorAll('.btn');
             
-            // 重新设计的 SVG：复刻了你提供的图片样式
-            // 1. 红色帽身：从左侧升起，向右侧自然弯曲下垂。
-            // 2. 白色帽檐：厚实、圆润的长条形，覆盖在帽身底部。
-            // 3. 白色毛球：位于帽尖的大圆球。
+            // 完美复刻参考图样式的 SVG：
+            // 1. 红色主体：起步更圆润，中间饱满，向右自然垂下，呈现“腰果”状的可爱弧度。
+            // 2. 白色帽檐：加宽加厚，两端圆润，完美托住红色帽子。
+            // 3. 整体比例：严格参照你发的 image_a2e79b.png 调整。
             const hatSvg = `
                 <svg viewBox="0 0 100 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M 15, 80 C 15, 20  60, 0  95, 45 L 75, 80 Z" fill="#FF3B30"/>
+                    <path d="M 15, 72 C 15, 10  65, 5  92, 45 Q 82, 55  72, 72 Z" fill="#FF3B30"/>
                     
-                    <rect x="5" y="70" width="90" height="25" rx="12" ry="12" fill="#FFFFFF"/>
+                    <rect x="5" y="68" width="90" height="22" rx="11" ry="11" fill="#FFFFFF"/>
                     
-                    <circle cx="95" cy="45" r="13" fill="#FFFFFF"/>
+                    <circle cx="92" cy="45" r="12" fill="#FFFFFF"/>
                 </svg>
             `;
             
