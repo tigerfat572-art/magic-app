@@ -208,48 +208,56 @@
             display: none;
         }
 
-    /* 圣诞帽容器样式 - 极简版适配 */
-  /* 圣诞帽容器样式 - 俏皮版适配 */
-.santa-hat {
-    position: absolute;
-    /* 位置微调：稍微往上提一点，让倾斜的底座正好压在按钮边缘 */
-    top: -38px;
-    left: 55%;
-    
-    /* 大小不变 */
-    width: 45px;
-    height: 45px;
-    
-    z-index: 10;
-    pointer-events: none;
-    opacity: 0;
-    
-    /* 初始状态：加大倾斜角度，制造“飞入”感 */
-    transform: translateX(-50%) scale(0.5) rotate(-30deg);
-    
-    /* 动画保持 Q 弹 */
-    transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
+   /* 圣诞帽容器样式 - 完美贴合位置版 */
+        .santa-hat {
+            position: absolute;
+            /* ▼▼▼ 核心修改 ▼▼▼ */
+            /* 之前是 -30px 太高了，改成 -10px，让它沉下来压住按钮 */
+            top: -10px;
+            
+            /* 居中定位不变 */
+            left: 50%;
+            
+            /* 大小稍微加大一点点，视觉更平衡 */
+            width: 55px;
+            height: 55px;
+            
+            z-index: 10;
+            pointer-events: none;
+            opacity: 0;
+            
+            /* 初始状态：歪一点 */
+            transform: translateX(-50%) scale(0.5) rotate(-30deg);
+            
+            /* Q弹动画 */
+            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
 
-/* 帽子出现时的状态 */
-.santa-hat.visible {
-    opacity: 1;
-    /* 最终状态：减小旋转角度（从 -10deg 改为 -5deg） */
-    /* 因为帽子本身就斜了，稍微歪一点点就非常自然俏皮了 */
-    transform: translateX(-50%) scale(1) rotate(-5deg);
-}
+        /* 帽子出现时的状态 */
+        .santa-hat.visible {
+            opacity: 1;
+            /* 最终状态：角度设为 -15度，正好贴合圆形边缘的弧度 */
+            transform: translateX(-50%) scale(1) rotate(-15deg);
+        }
 
-/* 0键的帽子适配 */
-.btn-zero .santa-hat {
-    left: auto;
-    right: 15px;
-    /* 初始角度同步调整 */
-    transform: scale(0.5) rotate(-30deg);
-}
-.btn-zero .santa-hat.visible {
-    /* 最终角度同步调整 */
-    transform: scale(1) rotate(-5deg);
-}
+        /* 0键的帽子特殊调整 */
+        .btn-zero .santa-hat {
+            /* 取消居中，靠右放 */
+            left: auto;
+            /* 调整这个数字控制左右：数字越大越靠左 */
+            right: 15px; 
+            
+            /* 高度和其他按钮保持一致 */
+            top: -10px;
+            
+            /* 初始角度 */
+            transform: scale(0.5) rotate(-30deg);
+        }
+
+        .btn-zero .santa-hat.visible {
+            /* 最终角度 */
+            transform: scale(1) rotate(-15deg);
+        }
     </style>
 </head>
 <body ontouchstart="" oncontextmenu="return false;">
