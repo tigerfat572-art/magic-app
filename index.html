@@ -993,18 +993,20 @@
         
         let snowAnimationId = null;
         
-    // 1. 初始化帽子DOM (终极顺滑优化版)
+    // 1. 初始化帽子DOM (完美对齐修复版)
         function initSantaHats() {
             const buttons = document.querySelectorAll('.btn');
             
-            // 重新设计的 SVG：连接处完美顺滑，造型更饱满可爱
+            // 修复逻辑：
+            // 1. 让红色部分的底部宽度(x1~x2)与白色帽檐完全一致，不再“偏左”。
+            // 2. 调整了红色贝塞尔曲线的弧度，让它看起来是从整个帽檐上长出来的。
             const hatSvg = `
                 <svg viewBox="0 0 100 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M15,65 C15,40 40,10 85,25 C95,30 90,45 75,45 C55,45 50,65 45,65 Z" fill="#FF3B30"/>
+                    <path d="M12,64 C12,30 35,5 85,25 C92,28 92,40 82,42 C65,42 60,64 50,64 L12,64 Z" fill="#FF3B30"/>
                     
-                    <rect x="10" y="62" width="70" height="18" rx="9" ry="9" fill="#FFFFFF"/>
+                    <rect x="10" y="60" width="76" height="18" rx="9" ry="9" fill="#FFFFFF"/>
                     
-                    <circle cx="90" cy="35" r="10" fill="#FFFFFF"/>
+                    <circle cx="90" cy="35" r="11" fill="#FFFFFF"/>
                 </svg>
             `;
             
