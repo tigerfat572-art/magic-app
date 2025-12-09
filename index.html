@@ -209,37 +209,47 @@
         }
 
     /* 圣诞帽容器样式 - 极简版适配 */
-    .santa-hat {
-    /* 位置 */
-    top: -25px;    
-    left: 50%;      /* 强制居中 */
-    transform: translateX(-50%) scale(0.5) rotate(-20deg); /* 居中定位 */
+  /* 圣诞帽容器样式 - 俏皮版适配 */
+.santa-hat {
+    position: absolute;
+    /* 位置微调：稍微往上提一点，让倾斜的底座正好压在按钮边缘 */
+    top: -30px;
+    left: 50%;
     
-    /* 其他保持不变 */
+    /* 大小不变 */
     width: 45px;
     height: 45px;
-    position: absolute;
+    
     z-index: 10;
     pointer-events: none;
     opacity: 0;
+    
+    /* 初始状态：加大倾斜角度，制造“飞入”感 */
+    transform: translateX(-50%) scale(0.5) rotate(-30deg);
+    
+    /* 动画保持 Q 弹 */
     transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* 帽子出现时的状态 */
 .santa-hat.visible {
     opacity: 1;
-    transform: translateX(-50%) scale(1) rotate(-10deg); /* 戴稳 */
+    /* 最终状态：减小旋转角度（从 -10deg 改为 -5deg） */
+    /* 因为帽子本身就斜了，稍微歪一点点就非常自然俏皮了 */
+    transform: translateX(-50%) scale(1) rotate(-5deg);
 }
 
-/* 0键保持靠右 */
+/* 0键的帽子适配 */
 .btn-zero .santa-hat {
     left: auto;
     right: 15px;
-    transform: scale(0.5) rotate(-20deg);
+    /* 初始角度同步调整 */
+    transform: scale(0.5) rotate(-30deg);
 }
 .btn-zero .santa-hat.visible {
-    transform: scale(1) rotate(-10deg);
+    /* 最终角度同步调整 */
+    transform: scale(1) rotate(-5deg);
 }
-
     </style>
 </head>
 <body ontouchstart="" oncontextmenu="return false;">
@@ -995,16 +1005,20 @@
         let snowAnimationId = null;
         
    // 1. 初始化帽子DOM (底座绝对居中版)
+    // 1. 初始化帽子DOM (俏皮长帽 & 倾斜底座版)
         function initSantaHats() {
             const buttons = document.querySelectorAll('.btn');
             
+            // 全新设计的 SVG：
+            // 1. 帽身(红色)更长，有一个向右上翘起的俏皮弧度。
+            // 2. 底座和帽檐(白色)是倾斜的弧线，模拟戴在球面上的感觉。
             const hatSvg = `
                 <svg viewBox="0 0 100 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M25,62 C25,30 45,10 85,25 Q92,30 88,40 Q75,35 75,62 Z" fill="#FF3B30"/>
+                    <path d="M20,62 C20,20 60,-10 100,25 Q95,45 78,68 Q50,73 20,62 Z" fill="#FF3B30"/>
                     
-                    <rect x="15" y="60" width="70" height="18" rx="9" ry="9" fill="#FFFFFF"/>
+                    <path d="M15,60 Q50,70 85,66 A8,8 0 0,1 87,80 Q50,85 13,75 A8,8 0 0,1 15,60 Z" fill="#FFFFFF"/>
                     
-                    <circle cx="88" cy="35" r="11" fill="#FFFFFF"/>
+                    <circle cx="100" cy="25" r="12" fill="#FFFFFF"/>
                 </svg>
             `;
             
