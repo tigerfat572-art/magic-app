@@ -1004,25 +1004,26 @@
         
         let snowAnimationId = null;
         
-   // 1. 初始化帽子DOM (底座绝对居中版)
-    // 1. 初始化帽子DOM (俏皮长帽 & 倾斜底座版)
+   // 1. 初始化帽子DOM (经典卡通弯曲版)
         function initSantaHats() {
             const buttons = document.querySelectorAll('.btn');
             
-            // 全新设计的 SVG：
-            // 1. 帽身(红色)更长，有一个向右上翘起的俏皮弧度。
-            // 2. 底座和帽檐(白色)是倾斜的弧线，模拟戴在球面上的感觉。
+            // 重新设计的 SVG：复刻了你提供的图片样式
+            // 1. 红色帽身：从左侧升起，向右侧自然弯曲下垂。
+            // 2. 白色帽檐：厚实、圆润的长条形，覆盖在帽身底部。
+            // 3. 白色毛球：位于帽尖的大圆球。
             const hatSvg = `
                 <svg viewBox="0 0 100 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M20,62 C20,20 60,-10 100,25 Q95,45 78,68 Q50,73 20,62 Z" fill="#FF3B30"/>
+                    <path d="M 15, 80 C 15, 20  60, 0  95, 45 L 75, 80 Z" fill="#FF3B30"/>
                     
-                    <path d="M15,60 Q50,70 85,66 A8,8 0 0,1 87,80 Q50,85 13,75 A8,8 0 0,1 15,60 Z" fill="#FFFFFF"/>
+                    <rect x="5" y="70" width="90" height="25" rx="12" ry="12" fill="#FFFFFF"/>
                     
-                    <circle cx="100" cy="25" r="12" fill="#FFFFFF"/>
+                    <circle cx="95" cy="45" r="13" fill="#FFFFFF"/>
                 </svg>
             `;
             
             buttons.forEach(btn => {
+                // 先清空，防止重复添加
                 const existingHat = btn.querySelector('.santa-hat');
                 if(existingHat) existingHat.remove();
 
