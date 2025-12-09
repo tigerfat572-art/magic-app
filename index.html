@@ -85,18 +85,16 @@
 
         .file-label { color: #0a84ff; font-size: 17px; }
         
-        /* 图片状态区域样式优化 */
         .file-status-container { display: flex; align-items: center; gap: 8px; z-index: 20; position: relative; }
         .file-status { font-size: 14px; color: #636366; max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
-        /* 清除图片按钮 */
         .clear-img-btn {
             background: rgba(60, 60, 60, 0.8);
             color: #ff453a;
             border: none;
             border-radius: 50%;
             width: 22px; height: 22px;
-            display: none; /* 默认隐藏 */
+            display: none;
             align-items: center; justify-content: center;
             font-size: 16px; font-weight: bold;
             cursor: pointer;
@@ -106,7 +104,7 @@
 
         input[type="file"] {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;
-            z-index: 10; /* 必须低于清除按钮的 z-index */
+            z-index: 10;
         }
 
         .switch { position: relative; display: inline-block; width: 51px; height: 31px; }
@@ -119,7 +117,6 @@
         .hidden-section { display: none; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* 按钮组样式 */
         .btn-container {
             width: 100%; max-width: 350px;
             display: flex; gap: 10px; margin-bottom: 20px; margin-top: 10px; flex-shrink: 0;
@@ -161,7 +158,6 @@
 
         #display[contenteditable="true"] { cursor: text; }
 
-        /* 遥控器状态显示 */
         #remote-indicator {
             position: absolute; top: calc(env(safe-area-inset-top) + 10px); left: 20px;
             font-size: 12px; color: #30d158; opacity: 0; transition: opacity 0.5s;
@@ -170,7 +166,6 @@
 
         .buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; padding: 0 14px 14px 14px; position: relative; }
         
-        /* 隐形按钮 */
         #ui-layer-mask { 
             position: absolute; top: -80px; right: 0; width: 25%; height: 100px; 
             background: transparent !important; z-index: 999;
@@ -185,15 +180,15 @@
             display: flex; justify-content: center; align-items: center; 
             transition: background-color 0.2s ease-out; 
             outline: none; -webkit-tap-highlight-color: transparent; 
+            /* 新增：允许子元素溢出显示帽子 */
+            position: relative; overflow: visible;
         }
         
         .btn-num { background-color: #333333; color: white; }
         .btn-fn { background-color: #a5a5a5; color: black; }
         .btn-op { background-color: #ff9f0a; color: white; font-size: 40px; padding-bottom: 4px; }
         
-        /* 激活状态 */
         .btn.active-state { transition: none !important; }
-        
         .btn-num.active-state { background-color: #737373 !important; }
         .btn-fn.active-state { background-color: #d9d9d9 !important; }
         .btn-op.active-state { background-color: #fbc78d !important; color: #ff9f0a !important; }
@@ -204,18 +199,48 @@
         
         .btn-zero { grid-column: span 2; aspect-ratio: auto; height: 100%; border-radius: 100px; justify-content: flex-start; padding-left: 34px; }
 
+        /* --- 圣诞特效样式 --- */
+        #snow-canvas {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none; /* 确保雪花不挡住操作 */
+            z-index: 1500;
+            display: none;
+        }
+
+        .santa-hat {
+            position: absolute;
+            top: -12px;
+            right: -8px;
+            width: 32px;
+            height: 32px;
+            z-index: 10;
+            pointer-events: none;
+            opacity: 0;
+            transform: scale(0.5) rotate(-10deg);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .santa-hat.visible {
+            opacity: 1;
+            transform: scale(1) rotate(15deg);
+        }
+
+        /* 0键的帽子位置微调 */
+        .btn-zero .santa-hat { right: 50%; margin-right: -100px; }
+
     </style>
 </head>
 <body ontouchstart="" oncontextmenu="return false;">
 
-    <!-- 设置页面 -->
+    <canvas id="snow-canvas"></canvas>
+
     <div id="setup-screen">
         <div class="setup-header">
             <div class="setup-title">Magic Panghu</div>
             <div class="setup-subtitle">魔术设置</div>
         </div>
         
-        <!-- 模式选择 -->
         <div class="section-group">
             <div class="list-item selected" id="mode-time" onclick="selectMode('time')">
                 <span class="item-label">当前时间 (MMDDHHmm)</span>
@@ -230,7 +255,17 @@
             </div>
         </div>
 
-        <!-- 除0设置 1 -->
+        <div class="group-title">彩蛋功能</div>
+        <div class="section-group">
+            <div class="list-item">
+                <span class="item-label">🎄 圣诞模式 (1225 ÷ 0)</span>
+                <label class="switch">
+                    <input type="checkbox" id="xmas-toggle" onchange="toggleXmasMode()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
         <div class="group-title">第一次 除以 0 (铺垫)</div>
         <div class="section-group">
             <div class="input-row">
@@ -240,14 +275,12 @@
                 <span class="file-label">显示图片</span>
                 <div class="file-status-container">
                     <span id="img-status-1" class="file-status">未选择</span>
-                    <!-- 修复：清除按钮 -->
                     <button class="clear-img-btn" id="btn-clear-1" onclick="clearImage(event, 0)">×</button>
                 </div>
                 <input type="file" id="file-input-1" accept="image/*" onchange="handleImageSelect(this, 0)">
             </div>
         </div>
 
-        <!-- 除0设置 2 -->
         <div class="group-title">第二次 除以 0 (预言)</div>
         <div class="section-group">
             <div class="input-row">
@@ -257,14 +290,12 @@
                 <span class="file-label">显示图片</span>
                 <div class="file-status-container">
                     <span id="img-status-2" class="file-status">未选择</span>
-                    <!-- 修复：清除按钮 -->
                     <button class="clear-img-btn" id="btn-clear-2" onclick="clearImage(event, 1)">×</button>
                 </div>
                 <input type="file" id="file-input-2" accept="image/*" onchange="handleImageSelect(this, 1)">
             </div>
         </div>
 
-        <!-- 远程设置 -->
         <div class="section-group">
             <div class="list-item">
                 <span class="item-label">远程助手模式</span>
@@ -288,14 +319,12 @@
             </div>
         </div>
 
-        <!-- 底部按钮组 -->
         <div class="btn-container">
             <button class="action-btn save-btn" onclick="saveSettings()">保存配置</button>
             <button class="action-btn start-btn" onclick="startApp()">进入系统</button>
         </div>
     </div>
 
-    <!-- 计算器主体 -->
     <div class="calculator-wrapper" id="calc-app">
         <div class="calculator">
             <div id="remote-indicator">助手模式: 未连接</div>
@@ -341,6 +370,7 @@
         /* --- 全局变量 --- */
         let appRole = 'calc'; 
         let magicMode = 'time'; 
+        let isXmasMode = false; // 新增：圣诞模式开关
         let fixedTargetValue = 0;
         
         let divZeroConfig = [
@@ -394,6 +424,7 @@
             
             const settings = {
                 mode: magicMode,
+                xmasMode: document.getElementById('xmas-toggle').checked, // 保存圣诞设置
                 fixedValue: document.getElementById('fixed-number-input').value,
                 divZeroConfig: divZeroConfig, 
                 isRemote: document.getElementById('remote-toggle').checked,
@@ -418,12 +449,17 @@
                 const s = JSON.parse(saved);
                 if (s.mode) selectMode(s.mode);
                 if (s.fixedValue) document.getElementById('fixed-number-input').value = s.fixedValue;
+                
+                // 读取圣诞模式设置
+                if (s.xmasMode !== undefined) {
+                    isXmasMode = s.xmasMode;
+                    document.getElementById('xmas-toggle').checked = isXmasMode;
+                }
+
                 if (s.divZeroConfig) {
                     divZeroConfig = s.divZeroConfig;
                     if(divZeroConfig[0].text) document.getElementById('div-zero-1-text').value = divZeroConfig[0].text;
                     if(divZeroConfig[1].text) document.getElementById('div-zero-2-text').value = divZeroConfig[1].text;
-                    
-                    // 恢复图片状态
                     updateImageStatusUI(0);
                     updateImageStatusUI(1);
                 }
@@ -439,7 +475,6 @@
             }
         }
 
-        /* --- 图片处理逻辑修复 --- */
         function handleImageSelect(input, index) {
             const statusId = index === 0 ? 'img-status-1' : 'img-status-2';
             const statusEl = document.getElementById(statusId);
@@ -456,24 +491,15 @@
             }
         }
 
-        // 新增：清除图片函数
         function clearImage(e, index) {
-            // 阻止冒泡，防止触发 input file 的点击
             e.stopPropagation();
             e.preventDefault();
-
-            // 清除数据
             divZeroConfig[index].img = null;
-            
-            // 清除文件输入框的值，确保下次可以重复选择同一文件
             const inputId = index === 0 ? 'file-input-1' : 'file-input-2';
             document.getElementById(inputId).value = '';
-
-            // 更新UI
             updateImageStatusUI(index);
         }
 
-        // 统一管理图片状态UI显示
         function updateImageStatusUI(index) {
             const statusId = index === 0 ? 'img-status-1' : 'img-status-2';
             const btnId = index === 0 ? 'btn-clear-1' : 'btn-clear-2';
@@ -483,11 +509,11 @@
             if (divZeroConfig[index].img) {
                 statusEl.innerText = "已加载图片";
                 statusEl.style.color = "#30d158";
-                btnEl.style.display = 'flex'; // 显示清除按钮
+                btnEl.style.display = 'flex';
             } else {
                 statusEl.innerText = "未选择";
                 statusEl.style.color = "#636366";
-                btnEl.style.display = 'none'; // 隐藏清除按钮
+                btnEl.style.display = 'none';
             }
         }
 
@@ -505,6 +531,10 @@
                 document.getElementById('mode-fixed').classList.add('selected');
                 fixedInputRow.style.display = 'block';
             }
+        }
+        
+        function toggleXmasMode() {
+            isXmasMode = document.getElementById('xmas-toggle').checked;
         }
 
         function toggleRemoteSettings() {
@@ -553,23 +583,19 @@
                 if (isRemoteEnabled) {
                     initMqttReceiver();
                 }
+                
+                // 预加载圣诞帽DOM
+                initSantaHats(); 
             } else {
                 document.getElementById('ui-layer-mask').style.display = 'none';
                 document.getElementById('remote-indicator').style.opacity = '1';
                 displayElement.contentEditable = "true"; 
                 
-                displayElement.addEventListener('compositionstart', () => {
-                    isComposing = true; 
-                });
-
+                displayElement.addEventListener('compositionstart', () => { isComposing = true; });
                 displayElement.addEventListener('compositionend', (e) => {
                     isComposing = false;
-                    setTimeout(() => {
-                        resizeFont();
-                        sendThrottledSyncContent();
-                    }, 50);
+                    setTimeout(() => { resizeFont(); sendThrottledSyncContent(); }, 50);
                 });
-
                 displayElement.addEventListener('input', (e) => {
                     if (isComposing) return;
                     resizeFont();
@@ -643,7 +669,6 @@
 
         const sendThrottledSyncContent = throttle(function() {
             if (isComposing) return; 
-            
             if (mqttClient && mqttClient.connected) {
                 const content = displayElement.innerText;
                 mqttClient.publish(`magic-calc/${roomId}`, `TXT:${content}`, { qos: 0, retain: false });
@@ -684,18 +709,15 @@
                 
                 if (msg.startsWith('TXT:')) {
                     const content = msg.substring(4);
-                    
                     if (content === '0') {
                         displayElement.innerHTML = '0';
                         currentDisplay = '0';
                     } else {
                         displayElement.innerText = content;
                     }
-                    
                     const safeNum = parseFloat(content);
                     if (!isNaN(safeNum)) currentDisplay = String(safeNum);
                     else currentDisplay = "0";
-                    
                     resizeFont();
                 } 
                 else if (msg.startsWith('CMD:')) {
@@ -821,7 +843,18 @@
             } else if (currentOperator) {
                 const resultObj = calculate(previousValue, inputValue, currentOperator);
                 
+                // 处理圣诞特效或除以0特效
                 if (typeof resultObj === 'object' && resultObj.isDivZero) {
+                     if (resultObj.isXmas) {
+                         // 圣诞模式特殊处理
+                         currentDisplay = "0"; // 归零，允许继续操作
+                         previousValue = null;
+                         currentOperator = null;
+                         waitingForOperand = true;
+                         updateDisplay();
+                         return;
+                     }
+                     
                      if (resultObj.img) {
                          displayElement.innerHTML = `<img src="${resultObj.img}" />`;
                      } else {
@@ -849,6 +882,13 @@
             if (operator === '*') return first * second;
             if (operator === '/') {
                 if (Number(second) === 0) {
+                    // --- 圣诞彩蛋检查 ---
+                    if (isXmasMode && Number(first) === 1225) {
+                        startChristmasEffect();
+                        return { isDivZero: true, isXmas: true };
+                    }
+                    
+                    // --- 原有除以0逻辑 ---
                     let configIndex = divZeroCounter;
                     if (configIndex >= divZeroConfig.length) {
                         configIndex = divZeroConfig.length - 1;
@@ -935,6 +975,134 @@
             previousValue = null;
             currentOperator = null;
             waitingForOperand = true;
+        }
+        
+        /* ----------------------- */
+        /* --- 圣诞特效逻辑新增 --- */
+        /* ----------------------- */
+        
+        let snowAnimationId = null;
+        
+        // 1. 初始化帽子DOM
+        function initSantaHats() {
+            const buttons = document.querySelectorAll('.btn');
+            const hatSvg = `
+                <svg viewBox="0 0 1024 1024" width="100%" height="100%">
+                    <path d="M512 85.333c-164.928 0-302.933 118.805-334.848 273.067h669.696c-31.915-154.262-169.92-273.067-334.848-273.067z" fill="#D81E06"></path>
+                    <path d="M869.717 409.6H154.283c-23.21 0-42.667 19.456-42.667 42.667v85.333c0 23.21 19.456 42.667 42.667 42.667h715.434c23.21 0 42.667-19.456 42.667-42.667v-85.333c0-23.21-19.456-42.667-42.667-42.667z" fill="#FFFFFF"></path>
+                    <circle cx="512" cy="65" r="50" fill="#FFFFFF"/>
+                </svg>
+            `;
+            
+            buttons.forEach(btn => {
+                const hatDiv = document.createElement('div');
+                hatDiv.className = 'santa-hat';
+                hatDiv.innerHTML = hatSvg;
+                btn.appendChild(hatDiv);
+            });
+        }
+        
+        // 2. 开始特效
+        function startChristmasEffect() {
+            // 开始下雪
+            const canvas = document.getElementById('snow-canvas');
+            canvas.style.display = 'block';
+            startSnow(canvas);
+            
+            // 帽子依次出现
+            const hats = document.querySelectorAll('.santa-hat');
+            // 获取所有帽子并打乱一点顺序或者按按钮顺序
+            // 按DOM顺序通常是 7,8,9,*,4,5,6...
+            
+            let delay = 0;
+            const interval = 100; // 每个帽子间隔100ms
+            
+            hats.forEach((hat, index) => {
+                setTimeout(() => {
+                    hat.classList.add('visible');
+                    if (navigator.vibrate) navigator.vibrate(10); // 轻微震动反馈
+                    
+                    // 如果是最后一个帽子，停止下雪
+                    if (index === hats.length - 1) {
+                        setTimeout(() => {
+                            stopSnow();
+                        }, 1500); // 稍微多下1.5秒
+                    }
+                }, delay);
+                delay += interval;
+            });
+        }
+        
+        // 3. 雪花逻辑
+        function startSnow(canvas) {
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width = window.innerWidth;
+            const h = canvas.height = window.innerHeight;
+            
+            const particles = [];
+            for (let i = 0; i < 100; i++) {
+                particles.push({
+                    x: Math.random() * w,
+                    y: Math.random() * h,
+                    r: Math.random() * 3 + 1,
+                    d: Math.random() * 100 // density
+                });
+            }
+            
+            let angle = 0;
+            let isSnowing = true;
+            
+            function draw() {
+                ctx.clearRect(0, 0, w, h);
+                ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+                ctx.beginPath();
+                
+                for (let i = 0; i < particles.length; i++) {
+                    const p = particles[i];
+                    ctx.moveTo(p.x, p.y);
+                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2, true);
+                }
+                ctx.fill();
+                update();
+                
+                if (isSnowing || particles.some(p => p.y < h)) {
+                    snowAnimationId = requestAnimationFrame(draw);
+                } else {
+                    canvas.style.display = 'none'; // 彻底结束后隐藏
+                }
+            }
+            
+            function update() {
+                angle += 0.01;
+                for (let i = 0; i < particles.length; i++) {
+                    const p = particles[i];
+                    p.y += Math.cos(angle + p.d) + 1 + p.r / 2;
+                    p.x += Math.sin(angle) * 2;
+                    
+                    // 如果还在下雪，且雪花出了底部，重置到顶部
+                    if (p.x > w + 5 || p.x < -5 || p.y > h) {
+                        if (isSnowing) {
+                            if (i % 3 > 0) { // 2/3 of the flakes
+                                particles[i] = {x: Math.random() * w, y: -10, r: p.r, d: p.d};
+                            } else {
+                                // If the flake is exitting from the right
+                                if (Math.sin(angle) > 0) {
+                                    particles[i] = {x: -5, y: Math.random() * h, r: p.r, d: p.d};
+                                } else {
+                                    particles[i] = {x: w + 5, y: Math.random() * h, r: p.r, d: p.d};
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 暴露停止函数到外部闭包
+            window.stopSnow = function() {
+                isSnowing = false;
+            };
+            
+            draw();
         }
 
         window.onload = function() {
