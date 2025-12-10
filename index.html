@@ -211,14 +211,13 @@
    /* 圣诞帽容器样式 - 完美贴合位置版 */
         .santa-hat {
             position: absolute;
-            /* ▼▼▼ 核心修改 ▼▼▼ */
-            /* 之前是 -30px 太高了，改成 -10px，让它沉下来压住按钮 */
+            /* 位置 */
             top: -10px;
             
-            /* 居中定位不变 */
+            /* 居中定位 */
             left: 50%;
             
-            /* 大小稍微加大一点点，视觉更平衡 */
+            /* 大小 */
             width: 55px;
             height: 55px;
             
@@ -226,7 +225,7 @@
             pointer-events: none;
             opacity: 0;
             
-            /* 初始状态：歪一点 */
+            /* 初始状态 */
             transform: translateX(-50%) scale(0.5) rotate(-30deg);
             
             /* Q弹动画 */
@@ -236,16 +235,15 @@
         /* 帽子出现时的状态 */
         .santa-hat.visible {
             opacity: 1;
-            /* 最终状态：角度设为 -15度，正好贴合圆形边缘的弧度 */
+            /* 最终状态 */
             transform: translateX(-50%) scale(1) rotate(-15deg);
         }
 
         /* 0键的帽子特殊调整 */
         .btn-zero .santa-hat {
-            /* ▼▼▼ 核心修改 ▼▼▼ */
-            /* 之前是靠右 (right: 15px)，现在改成靠左定位 */
-            right: auto; /* 取消靠右 */
-            left: 25px;  /* 从左边开始数 25px，正好对准数字 0 的位置 */
+            /* 靠左定位 */
+            right: auto;
+            left: 25px;
             
             /* 高度和旋转角度保持不变 */
             top: -10px;
@@ -872,15 +870,8 @@
                 
                 // 处理圣诞特效或除以0特效
                 if (typeof resultObj === 'object' && resultObj.isDivZero) {
-                     if (resultObj.isXmas) {
-                         // 圣诞模式特殊处理
-                         currentDisplay = "0"; // 归零，允许继续操作
-                         previousValue = null;
-                         currentOperator = null;
-                         waitingForOperand = true;
-                         updateDisplay();
-                         return;
-                     }
+                     // 修改：如果触发了圣诞特效，不直接return，而是继续往下走
+                     // 这样就可以兼容显示除0的图片/文字了
                      
                      if (resultObj.img) {
                          displayElement.innerHTML = `<img src="${resultObj.img}" />`;
@@ -910,9 +901,10 @@
             if (operator === '/') {
                 if (Number(second) === 0) {
                     // --- 圣诞彩蛋检查 ---
+                    // 修改点：触发圣诞特效后，不返回，而是继续往下执行
                     if (isXmasMode && Number(first) === 1225) {
                         startChristmasEffect();
-                        return { isDivZero: true, isXmas: true };
+                        // 这里不再 return，让代码继续流向下面的 divZeroConfig 逻辑
                     }
                     
                     // --- 原有除以0逻辑 ---
